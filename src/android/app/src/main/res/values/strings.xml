@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RAAMSES Console</string>
+    <string name="gateway_tab">Gateway</string>
+    <string name="dashboard_tab">Dashboard</string>
+    <string name="alerts_tab">Alerts</string>
+</resources>
