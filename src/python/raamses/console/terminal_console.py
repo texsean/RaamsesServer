@@ -1,157 +1,134 @@
 #!/usr/bin/env python3
 """
-Raamses Terminal Console - htop-style
+Raamses Terminal Console - Advanced ASCII TUI
 
-Powerful terminal-based dashboard for monitoring and controlling agents.
-Designed to feel like a "mission control" inside the terminal.
+Supports multiple display emulation modes:
+- full     : htop-style rich dashboard
+- cyd      : Small color LCD (320x240 style)
+- epaper   : Monochrome e-paper style
+
+Can be used as a real console or as a device emulator.
 """
 
 from rich.console import Console
-from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
-from rich.live import Live
 from rich.text import Text
+from rich.layout import Layout
+from rich.live import Live
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
-import threading
+from dataclasses import dataclass
+from typing import Literal
 import time
 from datetime import datetime
 
 
-class HtopStyleConsole:
-    def __init__(self):
-        self.console = Console()
-        self.layout = Layout()
-        self._setup_layout()
+DisplayMode = Literal["full", "cyd", "epaper"]
 
+
+@dataclass
+class DisplayProfile:
+    name: str
+    width: int
+    height: int
+    color: bool
+    refresh_type: str
+
+
+PROFILES = {
+    "full": DisplayProfile("Full Desktop", 120, 40, True, "lcd"),
+    "cyd": DisplayProfile("CYD 320x240", 40, 15, True, "lcd"),
+    "epaper": DisplayProfile("E-Paper 296x128", 37, 16, False, "epaper"),
+}
+
+
+class AdvancedTerminalConsole:
+    def __init__(self, mode: DisplayMode = "full"):
+        self.console = Console()
+        self.mode = mode
+        self.profile = PROFILES[mode]
         self.connected = False
         self.agent_status = "Idle"
-        self.token_usage = {"total": 0, "today": 0, "last_hour": 0}
-        self.alerts: list[dict] = []
-        self.devices: list[dict] = []
-        self.log_lines: list[str] = []
-
+        self.token_total = 124830
+        self.alerts = []
+        self.log = []
         self.running = True
-        self.session = PromptSession(
-            history=FileHistory(".raamses_history"),
-            message="> "
-        )
 
-    def _setup_layout(self):
-        self.layout.split_column(
-            Layout(name="header", size=3),
-            Layout(name="main", ratio=3),
-            Layout(name="bottom", size=8),
-        )
-        self.layout["main"].split_row(
-            Layout(name="left", ratio=2),
-            Layout(name="right", ratio=1),
-        )
+        self.session = PromptSession(history=FileHistory(".raamses_history"))
 
-    def log(self, message: str):
+    def log_event(self, msg: str):
         ts = datetime.now().strftime("%H:%M:%S")
-        self.log_lines.append(f"[{ts}] {message}")
-        if len(self.log_lines) > 12:
-            self.log_lines.pop(0)
+        self.log.append(f"[{ts}] {msg}")
+        if len(self.log) > 30:
+            self.log.pop(0)
 
-    def update_agent(self, status: str, tokens: dict = None):
-        self.agent_status = status
-        if tokens:
-            self.token_usage.update(tokens)
-
-    def add_alert(self, severity: str, message: str):
-        self.alerts.append({"time": datetime.now(), "severity": severity, "message": message})
-        if len(self.alerts) > 20:
-            self.alerts.pop(0)
-
-    def render_header(self) -> Panel:
-        title = Text("RAAMSES Terminal Console", style="bold cyan")
-        status = Text("● Connected" if self.connected else "● Disconnected",
-                      style="green" if self.connected else "red")
-        return Panel(Text.assemble(title, "  |  ", status),
-                     style="blue", height=3)
-
-    def render_agent_panel(self) -> Panel:
-        table = Table.grid(padding=1)
-        table.add_column(style="cyan", justify="right")
-        table.add_column(style="white")
-
-        table.add_row("Agent Status", self.agent_status)
-        table.add_row("Tokens (Total)", str(self.token_usage.get("total", 0)))
-        table.add_row("Tokens (Today)", str(self.token_usage.get("today", 0)))
-        table.add_row("Tokens (Last Hour)", str(self.token_usage.get("last_hour", 0)))
-
-        return Panel(table, title="Agent Overview", border_style="green")
-
-    def render_alerts_panel(self) -> Panel:
-        if not self.alerts:
-            content = Text("No recent alerts", style="dim")
-        else:
-            content = Text()
-            for a in self.alerts[-6:]:
-                color = {"critical": "red", "error": "red", "warning": "yellow"}.get(a["severity"], "white")
-                content.append(f"[{a['time'].strftime('%H:%M')}] ", style="dim")
-                content.append(f"{a['message']}\n", style=color)
-
-        return Panel(content, title="Alerts", border_style="red")
-
-    def render_devices_panel(self) -> Panel:
-        if not self.devices:
-            content = Text("No devices connected", style="dim")
-        else:
-            table = Table.grid()
-            table.add_column("Device")
-            table.add_column("Type")
-            for d in self.devices[-5:]:
-                table.add_row(d.get("id", "?"), d.get("type", "?"))
-            content = table
-
-        return Panel(content, title="Connected Devices", border_style="magenta")
-
-    def render_log(self) -> Panel:
-        content = "\n".join(self.log_lines[-8:]) if self.log_lines else "No events yet"
-        return Panel(content, title="Event Log", border_style="dim")
-
-    def render(self) -> Layout:
-        self.layout["header"].update(self.render_header())
-        self.layout["left"].update(self.render_agent_panel())
-        self.layout["right"].split_column(
-            self.render_alerts_panel(),
-            self.render_devices_panel()
+    def render_full(self):
+        layout = Layout()
+        layout.split_column(
+            Layout(Panel(Text("RAAMSES Terminal Console", style="bold cyan"), style="blue"), size=3),
+            Layout(name="main"),
+            Layout(Panel("\n".join(self.log[-6:]), title="Event Log", border_style="dim"), size=8),
         )
-        self.layout["bottom"].update(self.render_log())
-        return self.layout
+        layout["main"].split_row(
+            Layout(Panel(f"Agent Status: {self.agent_status}\nTokens: {self.token_total}", title="Overview")),
+            Layout(Panel("No alerts" if not self.alerts else "\n".join(self.alerts[-4:]), title="Alerts", border_style="red")),
+        )
+        return layout
+
+    def render_cyd(self):
+        """Small CYD-style display"""
+        content = Text()
+        content.append("RAAMSES CYD\n", style="bold cyan")
+        content.append(f"Status: {self.agent_status}\n")
+        content.append(f"Tokens: {self.token_total}\n")
+        if self.alerts:
+            content.append(f"Alert: {self.alerts[-1]}\n", style="red")
+        return Panel(content, title="CYD Emulation", border_style="green", width=42, height=17)
+
+    def render_epaper(self):
+        """Monochrome e-paper style"""
+        content = Text()
+        content.append("RAAMSES e-Paper\n", style="bold white")
+        content.append(f"Agent: {self.agent_status}\n")
+        content.append(f"Tok: {self.token_total}\n")
+        return Panel(content, title="E-Paper", border_style="white", width=39, height=18)
+
+    def render(self):
+        if self.mode == "full":
+            return self.render_full()
+        elif self.mode == "cyd":
+            return self.render_cyd()
+        else:
+            return self.render_epaper()
 
     def process_command(self, cmd: str):
         cmd = cmd.strip().lower()
         if not cmd:
             return
+        self.log_event(f"> {cmd}")
 
         if cmd.startswith("/"):
             action = cmd[1:]
-            self.log(f"Command: {cmd}")
-
-            if action in ["status", "approve", "reject", "refresh"]:
-                self.log(f"Action sent: {action}")
-            elif action == "connect":
+            if action == "connect":
                 self.connected = True
-                self.log("Connected to server")
+                self.log_event("Connected")
             elif action == "disconnect":
                 self.connected = False
-                self.log("Disconnected")
+            elif action == "mode":
+                print("Modes: full | cyd | epaper")
             elif action == "quit":
                 self.running = False
             else:
-                self.log(f"Unknown command: {cmd}")
+                self.log_event(f"Unknown command: {action}")
         else:
-            self.log(f"Unknown input: {cmd}")
+            self.log_event(f"Unknown: {cmd}")
 
     def run(self):
-        self.console.print("[bold cyan]RAAMSES Terminal Console[/bold cyan] — htop style")
-        self.console.print("Type /connect to start, /help for commands.\n")
+        self.console.print(f"[bold]Raamses Terminal Console[/bold] — Mode: {self.mode}")
+        self.console.print("Type /help or /connect\n")
 
-        with Live(self.render(), refresh_per_second=4, screen=True) as live:
+        with Live(self.render(), refresh_per_second=3, screen=True) as live:
             while self.running:
                 try:
                     live.update(self.render())
@@ -160,8 +137,10 @@ class HtopStyleConsole:
                 except (EOFError, KeyboardInterrupt):
                     self.running = False
 
-        self.console.print("\n[bold]Exiting Raamses Terminal Console.[/bold]")
+        self.console.print("\n[bold]Exiting.[/bold]")
 
 
 if __name__ == "__main__":
-    HtopStyleConsole().run()
+    import sys
+    mode = sys.argv[1] if len(sys.argv) > 1 else "full"
+    AdvancedTerminalConsole(mode=mode).run()
