@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 """
-Raamses Terminal Console - Advanced ASCII TUI
+Raamses Terminal Console - htop Style (Primary Mode)
 
-Supports multiple display emulation modes:
-- full     : htop-style rich dashboard
-- cyd      : Small color LCD (320x240 style)
-- epaper   : Monochrome e-paper style
-
-Can be used as a real console or as a device emulator.
+High-density, information-rich terminal dashboard inspired by htop.
+Also supports CYD and E-Paper emulation modes.
 """
 
 from rich.console import Console
@@ -16,42 +12,24 @@ from rich.table import Table
 from rich.text import Text
 from rich.layout import Layout
 from rich.live import Live
+from rich.bar import Bar
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
-from dataclasses import dataclass
-from typing import Literal
-import time
 from datetime import datetime
+import sys
 
 
-DisplayMode = Literal["full", "cyd", "epaper"]
-
-
-@dataclass
-class DisplayProfile:
-    name: str
-    width: int
-    height: int
-    color: bool
-    refresh_type: str
-
-
-PROFILES = {
-    "full": DisplayProfile("Full Desktop", 120, 40, True, "lcd"),
-    "cyd": DisplayProfile("CYD 320x240", 40, 15, True, "lcd"),
-    "epaper": DisplayProfile("E-Paper 296x128", 37, 16, False, "epaper"),
-}
-
-
-class AdvancedTerminalConsole:
-    def __init__(self, mode: DisplayMode = "full"):
+class HtopTerminalConsole:
+    def __init__(self, mode: str = "full"):
         self.console = Console()
         self.mode = mode
-        self.profile = PROFILES[mode]
         self.connected = False
-        self.agent_status = "Idle"
+        self.agent_status = "Running"
         self.token_total = 124830
+        self.token_today = 18420
+        self.sub_agents = 3
         self.alerts = []
+        self.devices = []
         self.log = []
         self.running = True
 
@@ -60,39 +38,86 @@ class AdvancedTerminalConsole:
     def log_event(self, msg: str):
         ts = datetime.now().strftime("%H:%M:%S")
         self.log.append(f"[{ts}] {msg}")
-        if len(self.log) > 30:
+        if len(self.log) > 15:
             self.log.pop(0)
+
+    # ==================== FULL HTOP-STYLE MODE ====================
+    def render_header(self):
+        title = Text("RAAMSES", style="bold cyan")
+        status = Text("● Connected" if self.connected else "● Disconnected",
+                      style="green" if self.connected else "red")
+        return Panel(Text.assemble(title, "  v1.0.0  |  ", status),
+                     style="blue", height=3)
+
+    def render_overview(self):
+        table = Table.grid(padding=(0, 2))
+        table.add_column(style="cyan", justify="right")
+        table.add_column(style="white")
+
+        table.add_row("Agent Status", self.agent_status)
+        table.add_row("Sub-Agents", str(self.sub_agents))
+        table.add_row("Tokens (Total)", f"{self.token_total:,}")
+        table.add_row("Tokens (Today)", f"{self.token_today:,}")
+
+        return Panel(table, title="Overview", border_style="green")
+
+    def render_alerts(self):
+        if not self.alerts:
+            content = Text("No recent alerts", style="dim")
+        else:
+            content = Text()
+            for a in self.alerts[-5:]:
+                color = "red" if a["severity"] == "critical" else "yellow"
+                content.append(f"{a['message']}\n", style=color)
+        return Panel(content, title="Alerts", border_style="red")
+
+    def render_devices(self):
+        if not self.devices:
+            content = Text("No devices", style="dim")
+        else:
+            t = Table.grid()
+            t.add_column("ID")
+            t.add_column("Type")
+            for d in self.devices[-6:]:
+                t.add_row(d.get("id", "?"), d.get("type", "?"))
+            content = t
+        return Panel(content, title="Devices", border_style="magenta")
+
+    def render_log(self):
+        content = "\n".join(self.log[-7:]) if self.log else "No events"
+        return Panel(content, title="Event Log", border_style="dim")
 
     def render_full(self):
         layout = Layout()
         layout.split_column(
-            Layout(Panel(Text("RAAMSES Terminal Console", style="bold cyan"), style="blue"), size=3),
-            Layout(name="main"),
-            Layout(Panel("\n".join(self.log[-6:]), title="Event Log", border_style="dim"), size=8),
+            Layout(self.render_header(), size=3),
+            Layout(name="main", ratio=5),
+            Layout(self.render_log(), size=9),
         )
         layout["main"].split_row(
-            Layout(Panel(f"Agent Status: {self.agent_status}\nTokens: {self.token_total}", title="Overview")),
-            Layout(Panel("No alerts" if not self.alerts else "\n".join(self.alerts[-4:]), title="Alerts", border_style="red")),
+            Layout(self.render_overview(), ratio=2),
+            Layout(self.render_alerts(), ratio=2),
+            Layout(self.render_devices(), ratio=1),
         )
         return layout
 
+    # ==================== CYD MODE ====================
     def render_cyd(self):
-        """Small CYD-style display"""
         content = Text()
         content.append("RAAMSES CYD\n", style="bold cyan")
         content.append(f"Status: {self.agent_status}\n")
         content.append(f"Tokens: {self.token_total}\n")
         if self.alerts:
-            content.append(f"Alert: {self.alerts[-1]}\n", style="red")
-        return Panel(content, title="CYD Emulation", border_style="green", width=42, height=17)
+            content.append(f"Alert: {self.alerts[-1]['message']}\n", style="red")
+        return Panel(content, title="CYD", border_style="green", width=42, height=16)
 
+    # ==================== EPAPER MODE ====================
     def render_epaper(self):
-        """Monochrome e-paper style"""
         content = Text()
         content.append("RAAMSES e-Paper\n", style="bold white")
         content.append(f"Agent: {self.agent_status}\n")
         content.append(f"Tok: {self.token_total}\n")
-        return Panel(content, title="E-Paper", border_style="white", width=39, height=18)
+        return Panel(content, title="E-Paper", border_style="white", width=38, height=16)
 
     def render(self):
         if self.mode == "full":
@@ -112,23 +137,21 @@ class AdvancedTerminalConsole:
             action = cmd[1:]
             if action == "connect":
                 self.connected = True
-                self.log_event("Connected")
+                self.log_event("Connected to server")
             elif action == "disconnect":
                 self.connected = False
-            elif action == "mode":
-                print("Modes: full | cyd | epaper")
             elif action == "quit":
                 self.running = False
             else:
-                self.log_event(f"Unknown command: {action}")
+                self.log_event(f"Unknown: {action}")
         else:
-            self.log_event(f"Unknown: {cmd}")
+            self.log_event(f"Unknown input: {cmd}")
 
     def run(self):
-        self.console.print(f"[bold]Raamses Terminal Console[/bold] — Mode: {self.mode}")
-        self.console.print("Type /help or /connect\n")
+        self.console.print(f"[bold cyan]RAAMSES Terminal Console[/bold cyan] — Mode: {self.mode}")
+        self.console.print("Type /connect or /help\n")
 
-        with Live(self.render(), refresh_per_second=3, screen=True) as live:
+        with Live(self.render(), refresh_per_second=4, screen=True) as live:
             while self.running:
                 try:
                     live.update(self.render())
@@ -137,10 +160,9 @@ class AdvancedTerminalConsole:
                 except (EOFError, KeyboardInterrupt):
                     self.running = False
 
-        self.console.print("\n[bold]Exiting.[/bold]")
+        self.console.print("\n[bold]Exiting Raamses Console.[/bold]")
 
 
 if __name__ == "__main__":
-    import sys
     mode = sys.argv[1] if len(sys.argv) > 1 else "full"
-    AdvancedTerminalConsole(mode=mode).run()
+    HtopTerminalConsole(mode=mode).run()
