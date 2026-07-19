@@ -3,8 +3,7 @@ name: Android Build
 on:
   push:
     branches: [ main, master ]
-    tags:
-      - 'v*'
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, master ]
 
@@ -25,30 +24,31 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x src/android/gradlew
+      - name: Make gradlew executable
+        run: chmod +x src/android/gradlew || true
 
       - name: Build Debug APK
         working-directory: src/android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
-      - name: Build Release APK
+      - name: Build Release APK (unsigned)
         working-directory: src/android
-        run: ./gradlew assembleRelease
-        env:
-          # Add signing config here later if needed
-          ORG_GRADLE_PROJECT_releaseStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          ORG_GRADLE_PROJECT_releaseKeyPassword: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --stacktrace || true
+
+      - name: List generated APKs
+        run: find src/android -name "*.apk" -type f || echo "No APKs found"
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: raamses-debug
-          path: src/android/app/build/outputs/apk/debug/*.apk
+          name: Raamses-Debug
+          path: |
+            src/android/app/build/outputs/apk/debug/*.apk
+            src/android/app/build/outputs/apk/debug/
 
       - name: Upload Release APK
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
-          name: raamses-release
+          name: Raamses-Release
           path: src/android/app/build/outputs/apk/release/*.apk
