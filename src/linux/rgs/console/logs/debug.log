@@ -1,0 +1,13 @@
+071926_140013.125	_gateway_start	Raamses Gateway listening on 0.0.0.0:8765
+071926_140013.125	_handle_register	Accepted registration CYD-320 (type=cyd)
+071926_140013.125	_handle_register	Accepted registration FULL-1 (type=full)
+071926_140013.125	_heartbeat	Heartbeat from CYD-320
+071926_140013.125	_handle_comm	REGISTER_ACK:true|2026-07-19T12:00:00Z|1.0|raamses-gateway
+071926_140013.125	_handle_comm	PING from FULL-1
+071926_140013.125	_handle_comm	TASK:rendering dashboard
+071926_140013.125	_handle_comm	UPDATE:render complete
+071926_140013.125	_handle_comm	Heartbeat from FULL-1
+071926_140013.125	_handle_register	Accepted registration EPAPER-1 (type=epaper)
+071926_140013.125	_heartbeat	Heartbeat from FULL-1
+071926_140013.125	_heartbeat	Heartbeat from CYD-320
+071926_140013.125	_handle_comm	REGISTER_ACK:true|2026-07-19T12:00:05Z|1.0|raamses-gateway

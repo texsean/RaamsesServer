@@ -1,8 +1,8 @@
 """Tests for the gateway message router and session registry."""
 
 import pytest
-from raamses.server.session_registry import SessionRegistry, AgentSession
-from raamses.server.message_router import MessageRouter
+from rgs.server.session_registry import SessionRegistry, AgentSession
+from rgs.server.message_router import MessageRouter
 
 
 # ── Session Registry Tests ─────────────────────────────────────────────────

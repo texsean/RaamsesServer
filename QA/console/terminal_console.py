@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Raamses Terminal Console - htop Style (Primary Mode)
+rgs Terminal Console - htop Style (Primary Mode)
 
 High-density, information-rich terminal dashboard inspired by htop.
 Also supports CYD and E-Paper emulation modes.
@@ -33,7 +33,7 @@ class HtopTerminalConsole:
         self.log = []
         self.running = True
 
-        self.session = PromptSession(history=FileHistory(".raamses_history"))
+        self.session = PromptSession(history=FileHistory(".rgs_history"))
 
     def log_event(self, msg: str):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -43,7 +43,7 @@ class HtopTerminalConsole:
 
     # ==================== FULL HTOP-STYLE MODE ====================
     def render_header(self):
-        title = Text("RAAMSES", style="bold cyan")
+        title = Text("rgs", style="bold cyan")
         status = Text("● Connected" if self.connected else "● Disconnected",
                       style="green" if self.connected else "red")
         return Panel(Text.assemble(title, "  v1.0.0  |  ", status),
@@ -104,7 +104,7 @@ class HtopTerminalConsole:
     # ==================== CYD MODE ====================
     def render_cyd(self):
         content = Text()
-        content.append("RAAMSES CYD\n", style="bold cyan")
+        content.append("rgs CYD\n", style="bold cyan")
         content.append(f"Status: {self.agent_status}\n")
         content.append(f"Tokens: {self.token_total}\n")
         if self.alerts:
@@ -114,7 +114,7 @@ class HtopTerminalConsole:
     # ==================== EPAPER MODE ====================
     def render_epaper(self):
         content = Text()
-        content.append("RAAMSES e-Paper\n", style="bold white")
+        content.append("rgs e-Paper\n", style="bold white")
         content.append(f"Agent: {self.agent_status}\n")
         content.append(f"Tok: {self.token_total}\n")
         return Panel(content, title="E-Paper", border_style="white", width=38, height=16)
@@ -148,7 +148,7 @@ class HtopTerminalConsole:
             self.log_event(f"Unknown input: {cmd}")
 
     def run(self):
-        self.console.print(f"[bold cyan]RAAMSES Terminal Console[/bold cyan] — Mode: {self.mode}")
+        self.console.print(f"[bold cyan]rgs Terminal Console[/bold cyan] — Mode: {self.mode}")
         self.console.print("Type /connect or /help\n")
 
         with Live(self.render(), refresh_per_second=4, screen=True) as live:
@@ -160,7 +160,7 @@ class HtopTerminalConsole:
                 except (EOFError, KeyboardInterrupt):
                     self.running = False
 
-        self.console.print("\n[bold]Exiting Raamses Console.[/bold]")
+        self.console.print("\n[bold]Exiting rgs Console.[/bold]")
 
 
 if __name__ == "__main__":

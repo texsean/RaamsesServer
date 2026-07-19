@@ -4,7 +4,7 @@
 
 ## Architecture
 
-The Raamses gateway receives messages from two sources:
+The rgs gateway receives messages from two sources:
 - **Connected devices/agents** (TCP/WS connections from CYD, Android, other gateways)
 - **Operators** (via the Android console or terminal)
 
@@ -58,6 +58,6 @@ Agents register themselves and update `current_task` as they work. The gateway t
 
 ## Implementation
 
-- `src/python/raamses/server/gateway.py` — main gateway server
-- `src/python/raamses/server/session_registry.py` — agent session tracking
-- `src/python/raamses/server/message_router.py` — classification and dispatch logic
+- `src/python/rgs/server/gateway.py` — main gateway server
+- `src/python/rgs/server/session_registry.py` — agent session tracking
+- `src/python/rgs/server/message_router.py` — classification and dispatch logic

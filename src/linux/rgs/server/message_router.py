@@ -15,7 +15,7 @@ import re
 from datetime import datetime, timezone
 from typing import Optional, Callable
 
-from raamses.server.session_registry import SessionRegistry
+from rgs.server.session_registry import SessionRegistry
 
 logger = logging.getLogger(__name__)
 

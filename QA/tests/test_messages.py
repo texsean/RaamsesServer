@@ -1,6 +1,6 @@
 import pytest
-from src.python.raamses.messages.envelope import RaamsesMessage, Header
-from src.python.raamses.messages.register import Register
+from src.linux.rgs.messages.envelope import RaamsesMessage, Header
+from src.linux.rgs.messages.register import Register
 
 
 def test_header_has_schema_version():

@@ -1,9 +1,9 @@
-# RaamsesServer - Project Status
+# rgsServer - Project Status
 
 **Last Updated:** 2026-07-18
 
 ## Current Focus
-Building the Linux/Python side of the Raamses server and desktop console to match the Windows C# implementation.
+Building the Linux/Python side of the rgs server and desktop console to match the Windows C# implementation.
 
 ### Active Work
 - Core message protocol with `SchemaVersion` support (for backward compatibility)
@@ -37,12 +37,12 @@ Building the Linux/Python side of the Raamses server and desktop console to matc
 ## Repository Structure (Target)
 
 ```
-RaamsesServer/
+rgsServer/
 ├── ProjectStatus/          # This folder - status, plans, decisions
 ├── schemas/                # XSD definitions
 ├── src/
 │   └── python/
-│       └── raamses/
+│       └── rgs/
 │           ├── messages/   # Protocol layer
 │           ├── client/     # TCP device client
 │           ├── console/    # Desktop Agent Console

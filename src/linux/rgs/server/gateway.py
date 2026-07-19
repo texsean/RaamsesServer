@@ -18,8 +18,8 @@ import threading
 from datetime import datetime, timezone
 from typing import Optional
 
-from raamses.server.session_registry import SessionRegistry
-from raamses.server.message_router import MessageRouter
+from rgs.server.session_registry import SessionRegistry
+from rgs.server.message_router import MessageRouter
 
 logger = logging.getLogger(__name__)
 
@@ -287,7 +287,7 @@ class GatewayServer:
 
         ack = (
             f"REGISTER_ACK:true|{datetime.now(timezone.utc).isoformat()}|"
-            f"{schema_ver}|raamses-gateway"
+            f"{schema_ver}|rgs-gateway"
         )
         self._send_to_client(conn, ack)
         logger.info("Registration accepted: %s (type=%s, fw=%s)",

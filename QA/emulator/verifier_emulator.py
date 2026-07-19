@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Raamses Verifier Emulator (Python version)
+rgs Verifier Emulator (Python version)
 
 Used for testing the verification engine before C++ implementation.
 Supports: LocalLLM, FILEbased, auto, blink

@@ -1,12 +1,12 @@
-# QA - Raamses Quality Assurance
+# QA - rgs Quality Assurance
 
-This folder contains unit tests, emulators, and console tools used for testing the Raamses system.
+This folder contains unit tests, emulators, and console tools used for testing the rgs system.
 
 ## Contents
 
 - `tests/` — Unit tests for messages, console, and verifier
 - `emulator/` — Verifier emulator (Python version)
-- `console/` — Raamses Terminal Console (htop-style + CYD + E-Paper modes)
+- `console/` — rgs Terminal Console (htop-style + CYD + E-Paper modes)
 
 ## Usage
 

@@ -4,7 +4,7 @@
 #include <chrono>
 
 Verifier::Verifier(const std::string& configPath) {
-    // TODO: Parse raamses-verifier.config properly
+    // TODO: Parse rgs-verifier.config properly
     methodology = "auto";
     localModel = "llama3.2:3b";
     maxLlmSeconds = 8;

@@ -3,11 +3,11 @@
 #include "logging/Logger.h"
 
 int main(int argc, char* argv[]) {
-    Logger::init("raamses_server.log");
+    Logger::init("rgs_server.log");
     Logger::info("RAAMSES Server starting...");
 
     ConfigLoader config;
-    if (!config.load("raamses.config")) {
+    if (!config.load("rgs.config")) {
         Logger::error("Failed to load configuration");
         return 1;
     }
