@@ -9,8 +9,17 @@ Building the Linux/Python side of the Raamses server and desktop console to matc
 - Core message protocol with `SchemaVersion` support (for backward compatibility)
 - TCP Device Client (registers and behaves like hardware devices)
 - Integrated Desktop Agent Console
-- Basic server stub for testing
+- **Gateway Server** (new — TCP message router with classification & delivery)
+- **Session Registry** (thread-safe agent tracking with heartbeat detection)
+- **Message Router** (classifies commands as gateway-local vs agent-targeted)
 - Modular XSD schema definitions
+- Basic server stub for testing
+
+### Gateway Routing Design (2026-07-19)
+- **Type 1: Gateway Communication** — direct protocol/admin commands execute locally on the server (e.g., `register`, `heartbeat`, `status`)
+- **Type 2: Agent-Targeted Commands** — routed to specific agent via `device_id` (e.g., `/cmd <id> <action>`, `/tell`, `/ask`, `/pause`, `/resume`)
+- **Race handling:** If an agent has moved on to a different task, the command is **dropped and logged** (not queued)
+- Full design documented in `ProjectStatus/gateway-routing.md`
 
 ### Key Design Decisions
 - Never infer capabilities from model names
