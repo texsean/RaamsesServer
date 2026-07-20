@@ -24,6 +24,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from rich.live import Live
+from rich.layout import Layout
 
 # ---------------------------------------------------------------------------
 # ASCII device icons
@@ -392,15 +394,34 @@ class RADARConsole:
             lines.append("")
         return "\n".join(lines)
 
+    def _render_to_string(self) -> str:
+        """Render the dashboard as a plain string (no TTY needed)."""
+        from io import StringIO
+        buf = StringIO()
+        tmp_console = Console(file=buf, force_terminal=True, width=120, soft_wrap=True)
+        panel = self.render()
+        tmp_console.print(panel)
+        return buf.getvalue()
+
     def run(self, interval: float = 1.0) -> None:
-        """Run the RADAR dashboard in a Rich Live loop."""
+        """Run the RADAR dashboard in a Rich Live loop or text fallback."""
         self.running = True
         self._last_log_size = os.path.getsize(self.log_path) if os.path.exists(self.log_path) else 0
 
         try:
-            with Live(self.render(), console=self.console, refresh_per_second=2) as live:
+            if sys.stdout.isatty() and sys.stderr.isatty():
+                # Interactive TTY — use Rich Live
+                with Live(self.render(), console=self.console, refresh_per_second=2) as live:
+                    while self.running:
+                        live.update(self.render())
+                        time.sleep(interval)
+            else:
+                # Non-TTY (pipe, file, background) — simple text redraw
+                esc_clear = "\033[2J\033[H"
                 while self.running:
-                    live.update(self.render())
+                    output = self._render_to_string()
+                    sys.stdout.write(esc_clear + output)
+                    sys.stdout.flush()
                     time.sleep(interval)
         except KeyboardInterrupt:
             self.console.print("\n[RADAR] Stopped.")
