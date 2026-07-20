@@ -218,9 +218,9 @@ class RADARConsole:
             comm = []
             for line in lines[-50:]:
                 line = line.strip()
-                if "Registered" in line or "ACCEPTED" in line or "heartbeat" in line:
+                if "Registered" in line or "ACCEPTED" in line or "heartbeat" in line.lower():
                     comm.append(line)
-                if "task updated" in line or "task:" in line.lower():
+                if "task" in line.lower():
                     comm.append(line)
             return comm[-20:]
         except FileNotFoundError:
