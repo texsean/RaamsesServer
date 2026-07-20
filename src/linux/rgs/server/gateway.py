@@ -268,6 +268,7 @@ class GatewayServer:
         if text.lower().startswith(("task:", "update:", "progress:")):
             task_text = text.split(":", 1)[1].strip() if ":" in text else text
             self._registry.mark_task(actual_id, task_text)
+            logger.info("TASK %s: %s", actual_id, task_text)
             self._send_to_client(conn, f"OK: task updated to '{task_text}'")
             return
 
