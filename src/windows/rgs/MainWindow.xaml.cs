@@ -12,6 +12,10 @@ namespace Raamses.RGS.Windows
         private DispatcherTimer _logTimer;
         private string _currentLogPath = "gateway.log"; // default debug log
 
+        // Multi-agent tracking
+        private int _agentCount = 0;
+        private ObservableCollection<AgentType> _detectedAgents = new ObservableCollection<AgentType>();
+
         public MainWindow()
         {
             InitializeComponent();
@@ -23,13 +27,16 @@ namespace Raamses.RGS.Windows
 
             // Seed some sample logs on startup
             WriteLog("RGSStartup", "Windows RGS initialized - Verification=Blink");
-            WriteLog("AgentDetection", "Scanning for local agents...");
-            WriteLog("DisplayManager", "Ready to register connected displays");
+
+            // Multi-agent detection on startup
+            DetectAgents();
+
+            // Populate display icons (placeholder)
+            PopulateDisplayIcons();
         }
 
         private void LoadLogFiles()
         {
-            // Placeholder - in real impl scan logs/ folder
             LogFileList.Items.Add("gateway.log");
             LogFileList.Items.Add("agent_hermes.log");
             LogFileList.Items.Add("agent_claude.log");
@@ -71,18 +78,49 @@ namespace Raamses.RGS.Windows
             catch { /* ignore */ }
         }
 
+        // === MULTI-AGENT DETECTION (stub for now) ===
+        private void DetectAgents()
+        {
+            _detectedAgents.Clear();
+
+            // TODO: Real implementation will scan processes / config / network
+            // For now we seed Hermes + Claude as example
+            _detectedAgents.Add(AgentType.Hermes);
+            _detectedAgents.Add(AgentType.Claude);
+
+            _agentCount = _detectedAgents.Count;
+
+            WriteLog("AgentDetection", $"Detected {_agentCount} agents: {string.Join(", ", _detectedAgents)}");
+            WriteLog("AgentDetection", $"<agentcount>{_agentCount}</agentcount> <agentType>{string.Join(",", _detectedAgents)}</agentType>");
+        }
+
+        // === DYNAMIC DISPLAY ICONS ===
+        private void PopulateDisplayIcons()
+        {
+            DisplayIconsPanel.Children.Clear();
+
+            // Example connected displays (will be dynamic later)
+            AddDisplayIcon("CYD-01");
+            AddDisplayIcon("Cardputer-Alpha");
+            AddDisplayIcon("Core2-Beta");
+        }
+
+        public void AddDisplayIcon(string displayName)
+        {
+            var icon = new TextBlock 
+            { 
+                Text = "🖥️ " + displayName, 
+                Margin = new Thickness(8, 0, 8, 0),
+                FontSize = 14
+            };
+            DisplayIconsPanel.Children.Add(icon);
+        }
+
         private void ApplyConfig_Click(object sender, RoutedEventArgs e)
         {
             string mode = ((ComboBoxItem)VerificationModeCombo.SelectedItem).Content.ToString();
-            // TODO: Apply to running RGS service / config file
+            WriteLog("ConfigApply", $"Verification mode changed to {mode}");
             MessageBox.Show($"Applied verification mode: {mode}");
-        }
-
-        // Placeholder for adding display icons dynamically
-        public void AddDisplayIcon(string displayName)
-        {
-            var icon = new TextBlock { Text = "🖥️ " + displayName, Margin = new Thickness(8,0,8,0) };
-            DisplayIconsPanel.Children.Add(icon);
         }
     }
 
