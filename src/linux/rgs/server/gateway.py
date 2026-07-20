@@ -238,6 +238,14 @@ class GatewayServer:
         # Look up the session by connection (not by raw device_id)
         session = self._registry.get_session_by_connection(conn)
 
+        # Gateway-local commands work for ALL clients (status, agents, ping, quit)
+        if text.lower().strip() in ("status", "ping"):
+            self._send_to_client(conn, self._execute_gateway_command(text.lower().strip()))
+            return
+        if text.lower().strip() in ("agents", "list", "list agents"):
+            self._send_to_client(conn, self._execute_gateway_command("agents"))
+            return
+
         if session is None:
             # Unregistered client — log and respond
             logger.info("Unregistered client %s sent: %s", device_id[:20], text[:100])

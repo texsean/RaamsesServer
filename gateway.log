@@ -1,31 +1,8 @@
-11:31:56 [INFO] Starting RGS Gateway daemon on port 8765
-11:31:56 [INFO] Raamses Gateway listening on 0.0.0.0:8765
-11:32:12 [INFO] Registered: agent-cyd-01 (type=cyd, schema=1.0)
-11:32:12 [INFO] Registration accepted: agent-cyd-01 (type=cyd, fw=1.0.0)
-11:32:12 [INFO] Registered: agent-full-02 (type=full, schema=1.0)
-11:32:12 [INFO] Registration accepted: agent-full-02 (type=full, fw=1.0.0)
-11:32:13 [INFO] Registered: agent-epaper-03 (type=epaper, schema=1.0)
-11:32:13 [INFO] Registration accepted: agent-epaper-03 (type=epaper, fw=1.0.0)
-11:32:20 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: initialize monitoring
-11:32:20 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: initialize monitoring
-11:32:21 [INFO] Unregistered client client-127.0.0.1:462 sent: done: completed: initialize monitoring
-11:32:28 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: collect sensor data
-11:32:28 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: collect sensor data
-11:32:29 [INFO] Unregistered client client-127.0.0.1:462 sent: done: completed: collect sensor data
-11:32:36 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: process telemetry
-11:32:36 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: process telemetry
-11:32:37 [INFO] Unregistered client client-127.0.0.1:462 sent: done: completed: process telemetry
-11:32:44 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: upload dashboard update
-11:32:44 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: upload dashboard update
-11:32:45 [INFO] Unregistered client client-127.0.0.1:462 sent: done: completed: upload dashboard update
-11:32:52 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: check system status
-11:32:52 [INFO] Unregistered client client-127.0.0.1:563 sent: done: completed: check system status
-11:32:53 [INFO] Unregistered client client-127.0.0.1:462 sent: done: completed: check system status
-11:32:57 [INFO] Starting RGS Gateway daemon on port 8765
-11:32:57 [INFO] Raamses Gateway listening on 0.0.0.0:8765
-11:33:03 [INFO] Registered: agent-cyd-01 (type=cyd, schema=1.0)
-11:33:03 [INFO] Registration accepted: agent-cyd-01 (type=cyd, fw=1.0.0)
-11:33:03 [INFO] Registered: agent-full-02 (type=full, schema=1.0)
-11:33:03 [INFO] Registration accepted: agent-full-02 (type=full, fw=1.0.0)
-11:33:04 [INFO] Registered: agent-epaper-03 (type=epaper, schema=1.0)
-11:33:04 [INFO] Registration accepted: agent-epaper-03 (type=epaper, fw=1.0.0)
+11:40:04 [INFO] root Starting RGS Gateway daemon on port 8765
+11:40:04 [INFO] rgs.server.gateway Raamses Gateway listening on 0.0.0.0:8765
+11:40:12 [INFO] rgs.server.session_registry Registered: agent-cyd-01 (type=cyd, schema=1.0)
+11:40:12 [INFO] rgs.server.gateway Registration accepted: agent-cyd-01 (type=cyd, fw=1.0.0)
+11:40:13 [INFO] rgs.server.session_registry Registered: agent-full-02 (type=full, schema=1.0)
+11:40:13 [INFO] rgs.server.gateway Registration accepted: agent-full-02 (type=full, fw=1.0.0)
+11:40:13 [INFO] rgs.server.session_registry Registered: agent-epaper-03 (type=epaper, schema=1.0)
+11:40:13 [INFO] rgs.server.gateway Registration accepted: agent-epaper-03 (type=epaper, fw=1.0.0)
