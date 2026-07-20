@@ -12,10 +12,6 @@ namespace Raamses.RGS.Windows
         private DispatcherTimer _logTimer;
         private string _currentLogPath = "gateway.log"; // default debug log
 
-        // Multi-agent tracking
-        private int _agentCount = 0;
-        private ObservableCollection<AgentType> _detectedAgents = new ObservableCollection<AgentType>();
-
         public MainWindow()
         {
             InitializeComponent();
@@ -27,16 +23,18 @@ namespace Raamses.RGS.Windows
 
             // Seed some sample logs on startup
             WriteLog("RGSStartup", "Windows RGS initialized - Verification=Blink");
+            WriteLog("AgentDetection", "Scanning for local agents...");
+            WriteLog("DisplayManager", "Ready to register connected displays");
 
-            // Multi-agent detection on startup
-            DetectAgents();
-
-            // Populate display icons (placeholder)
-            PopulateDisplayIcons();
+            // Example: add some connected displays
+            AddDisplayIcon("CYD-001");
+            AddDisplayIcon("Cardputer-01");
+            AddDisplayIcon("Core2-Dev");
         }
 
         private void LoadLogFiles()
         {
+            // Placeholder - in real impl scan logs/ folder
             LogFileList.Items.Add("gateway.log");
             LogFileList.Items.Add("agent_hermes.log");
             LogFileList.Items.Add("agent_claude.log");
@@ -78,33 +76,14 @@ namespace Raamses.RGS.Windows
             catch { /* ignore */ }
         }
 
-        // === MULTI-AGENT DETECTION (stub for now) ===
-        private void DetectAgents()
+        private void ApplyConfig_Click(object sender, RoutedEventArgs e)
         {
-            _detectedAgents.Clear();
-
-            // TODO: Real implementation will scan processes / config / network
-            // For now we seed Hermes + Claude as example
-            _detectedAgents.Add(AgentType.Hermes);
-            _detectedAgents.Add(AgentType.Claude);
-
-            _agentCount = _detectedAgents.Count;
-
-            WriteLog("AgentDetection", $"Detected {_agentCount} agents: {string.Join(", ", _detectedAgents)}");
-            WriteLog("AgentDetection", $"<agentcount>{_agentCount}</agentcount> <agentType>{string.Join(",", _detectedAgents)}</agentType>");
+            string mode = ((ComboBoxItem)VerificationModeCombo.SelectedItem).Content.ToString();
+            // TODO: Apply to running RGS service / config file
+            MessageBox.Show($"Applied verification mode: {mode}");
         }
 
-        // === DYNAMIC DISPLAY ICONS ===
-        private void PopulateDisplayIcons()
-        {
-            DisplayIconsPanel.Children.Clear();
-
-            // Example connected displays (will be dynamic later)
-            AddDisplayIcon("CYD-01");
-            AddDisplayIcon("Cardputer-Alpha");
-            AddDisplayIcon("Core2-Beta");
-        }
-
+        // Adds a display icon in the top-right row
         public void AddDisplayIcon(string displayName)
         {
             var icon = new TextBlock 
@@ -114,13 +93,6 @@ namespace Raamses.RGS.Windows
                 FontSize = 14
             };
             DisplayIconsPanel.Children.Add(icon);
-        }
-
-        private void ApplyConfig_Click(object sender, RoutedEventArgs e)
-        {
-            string mode = ((ComboBoxItem)VerificationModeCombo.SelectedItem).Content.ToString();
-            WriteLog("ConfigApply", $"Verification mode changed to {mode}");
-            MessageBox.Show($"Applied verification mode: {mode}");
         }
     }
 
