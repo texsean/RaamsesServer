@@ -30,11 +30,13 @@ namespace Raamses.RGS.Windows
             AddDisplayIcon("CYD-001");
             AddDisplayIcon("Cardputer-01");
             AddDisplayIcon("Core2-Dev");
+
+            // Simulate some raw communication between clients
+            SimulateRawCommunication();
         }
 
         private void LoadLogFiles()
         {
-            // Placeholder - in real impl scan logs/ folder
             LogFileList.Items.Add("gateway.log");
             LogFileList.Items.Add("agent_hermes.log");
             LogFileList.Items.Add("agent_claude.log");
@@ -63,7 +65,6 @@ namespace Raamses.RGS.Windows
             catch { /* ignore file lock */ }
         }
 
-        // Helper to write logs in the exact requested format: mmddyy-hhmmss.nnn
         public void WriteLog(string method, string detail)
         {
             string timestamp = DateTime.Now.ToString("MMddyy-HHmmss.fff");
@@ -79,11 +80,9 @@ namespace Raamses.RGS.Windows
         private void ApplyConfig_Click(object sender, RoutedEventArgs e)
         {
             string mode = ((ComboBoxItem)VerificationModeCombo.SelectedItem).Content.ToString();
-            // TODO: Apply to running RGS service / config file
             MessageBox.Show($"Applied verification mode: {mode}");
         }
 
-        // Adds a display icon in the top-right row
         public void AddDisplayIcon(string displayName)
         {
             var icon = new TextBlock 
@@ -94,9 +93,18 @@ namespace Raamses.RGS.Windows
             };
             DisplayIconsPanel.Children.Add(icon);
         }
+
+        // Simulate messages between different RAAMSES clients (Windows, Android, Linux, ESP32)
+        private void SimulateRawCommunication()
+        {
+            RawCommsBox.AppendText("[Android] → [RGS]     Register: AgentType=Claude, Device=Pixel7\n");
+            RawCommsBox.AppendText("[RGS]     → [Android] RegisterAck: SessionId=RAAM-7842\n");
+            RawCommsBox.AppendText("[Linux]   → [RGS]     Heartbeat: AgentCount=3 (Hermes, Claude, Unknown)\n");
+            RawCommsBox.AppendText("[RGS]     → [CYD-001] AgentUpdate: Hermes token burn rate 42/min\n");
+            RawCommsBox.AppendText("[Cardputer-01] → [RGS] Status: Connected\n");
+        }
     }
 
-    // AgentType enum as requested
     public enum AgentType
     {
         Hermes,
