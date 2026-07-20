@@ -1,2 +1,0 @@
-/usr/bin/ar qc librgs_core.a CMakeFiles/rgs_core.dir/ConfigLoader.cpp.o
-/usr/bin/ranlib librgs_core.a

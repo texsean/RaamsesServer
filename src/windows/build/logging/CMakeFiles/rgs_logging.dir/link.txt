@@ -1,2 +1,0 @@
-/usr/bin/ar qc librgs_logging.a CMakeFiles/rgs_logging.dir/Logger.cpp.o
-/usr/bin/ranlib librgs_logging.a
