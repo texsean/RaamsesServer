@@ -58,6 +58,6 @@ Agents register themselves and update `current_task` as they work. The gateway t
 
 ## Implementation
 
-- `src/python/rgs/server/gateway.py` — main gateway server
-- `src/python/rgs/server/session_registry.py` — agent session tracking
-- `src/python/rgs/server/message_router.py` — classification and dispatch logic
+- `src/linux/rgs/server/gateway.py` — main gateway server
+- `src/linux/rgs/server/session_registry.py` — agent session tracking
+- `src/linux/rgs/server/message_router.py` — classification and dispatch logic
