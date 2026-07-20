@@ -235,36 +235,39 @@ class GatewayServer:
             self._handle_register(device_id, text, conn)
             return
 
-        # Check if this is a heartbeat from a registered agent
-        if text.lower().startswith("heartbeat") or text == "PING":
-            if self._registry.heartbeat(device_id):
-                self._send_to_client(conn, "OK: heartbeat received")
-            return
+        # Look up the session by connection (not by raw device_id)
+        session = self._registry.get_session_by_connection(conn)
 
-        # Check for agent task update
-        if text.lower().startswith(("task:", "update:", "progress:")):
-            task_text = text.split(":", 1)[1].strip() if ":" in text else text
-            self._registry.mark_task(device_id, task_text)
-            self._send_to_client(conn, f"OK: task updated to '{task_text}'")
-            return
-
-        # Route through the message router
-        # If the client is a registered agent, send its messages to itself too
-        session = self._registry.get(device_id)
-        if session and session.connection is not None:
-            # This is a registered agent talking — echo response back
-            result = self._router.route(text)  # type: ignore[union-attr]
-            response = self._format_response(result, device_id)
-            self._send_to_client(conn, response)
-
-        # If not a registered agent, just route as gateway command
-        else:
+        if session is None:
             # Unregistered client — log and respond
             logger.info("Unregistered client %s sent: %s", device_id[:20], text[:100])
             self._send_to_client(
                 conn,
                 "INFO: unregistered client. Send 'REGISTER:<details>' first."
             )
+            return
+
+        # This is a registered agent — process by its actual device_id
+        actual_id = session.device_id
+
+        # Check if this is a heartbeat from a registered agent
+        if text.lower().startswith("heartbeat") or text == "PING":
+            if self._registry.heartbeat(actual_id):
+                self._send_to_client(conn, "OK: heartbeat received")
+            return
+
+        # Check for agent task update
+        if text.lower().startswith(("task:", "update:", "progress:")):
+            task_text = text.split(":", 1)[1].strip() if ":" in text else text
+            self._registry.mark_task(actual_id, task_text)
+            self._send_to_client(conn, f"OK: task updated to '{task_text}'")
+            return
+
+        # Route through the message router
+        if self._router:
+            result = self._router.route(text)
+            response = self._format_response(result, actual_id)
+            self._send_to_client(conn, response)
 
     def _handle_register(self, device_id: str, text: str, conn: socket.socket) -> None:
         """Parse and handle a REGISTER message."""

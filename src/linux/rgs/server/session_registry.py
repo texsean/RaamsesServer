@@ -137,3 +137,11 @@ class SessionRegistry:
     def count(self) -> int:
         with self._lock:
             return len(self._sessions)
+
+    def get_session_by_connection(self, conn) -> Optional[AgentSession]:
+        """Look up a session by its TCP connection object."""
+        with self._lock:
+            for session in self._sessions.values():
+                if session.connection is conn:
+                    return session
+            return None
