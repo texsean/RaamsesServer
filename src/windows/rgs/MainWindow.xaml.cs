@@ -53,6 +53,19 @@ namespace Raamses.RGS.Windows
             catch { /* ignore file lock */ }
         }
 
+        // Helper to write logs in the exact requested format: mmddyy-hhmmss.nnn
+        public void WriteLog(string method, string detail)
+        {
+            string timestamp = DateTime.Now.ToString("MMddyy-HHmmss.fff");
+            string logLine = $"{timestamp}\t{method}\t{detail}";
+
+            try
+            {
+                File.AppendAllText(_currentLogPath, logLine + Environment.NewLine);
+            }
+            catch { /* ignore */ }
+        }
+
         private void ApplyConfig_Click(object sender, RoutedEventArgs e)
         {
             string mode = ((ComboBoxItem)VerificationModeCombo.SelectedItem).Content.ToString();
