@@ -20,6 +20,11 @@ namespace Raamses.RGS.Windows
 
             // Default verification mode
             VerificationModeCombo.SelectedIndex = 0; // Blink
+
+            // Seed some sample logs on startup
+            WriteLog("RGSStartup", "Windows RGS initialized - Verification=Blink");
+            WriteLog("AgentDetection", "Scanning for local agents...");
+            WriteLog("DisplayManager", "Ready to register connected displays");
         }
 
         private void LoadLogFiles()
