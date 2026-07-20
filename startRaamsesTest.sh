@@ -31,9 +31,9 @@ set -euo pipefail
 # ─── Defaults ────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PYTHON="${SCRIPT_DIR}/.venv/bin/python"
-SERVER_PY="${SCRIPT_DIR}/src/python/raamses/server/mock_server.py"
-EMULATOR_PY="${SCRIPT_DIR}/src/python/raamses/client/device_emulator.py"
-MONITOR_PY="${SCRIPT_DIR}/src/python/raamses/monitor.py"
+SERVER_PY="${SCRIPT_DIR}/src/linux/rgs/server/mock_server.py"
+EMULATOR_PY="${SCRIPT_DIR}/src/linux/rgs/client/device_emulator.py"
+MONITOR_PY="${SCRIPT_DIR}/src/linux/rgs/monitor.py"
 PORT=9999
 TIMEOUT=""
 LOG_FILE="/tmp/raamses_test_$(date +%Y%m%d_%H%M%S).log"

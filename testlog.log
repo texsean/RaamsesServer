@@ -1,0 +1,36 @@
+
+============================================================
+  MOCK RAAMSES SERVER RUNNING
+  127.0.0.1:9999
+============================================================
+
+============================================================
+  RAAMSES DEVICE EMULATOR
+  ID: emu-cyd-1784573839
+  Type: cyd
+  Target: 127.0.0.1:9999
+============================================================
+
+
+[EMULATOR] Connecting to 127.0.0.1:9999 ...
+[EMULATOR] Connected!
+[EMULATOR] [REGISTER] Sent for emu-cyd-1784573839 (CYD 2.8" Color)
+[SERVER] New connection from ('127.0.0.1', 56178)
+[SERVER] <- Register from emu-cyd-1784573839
+[EMULATOR] [REGISTER] Accepted: tier=free server_time=2026-07-20T18:57:19
+[SERVER] [REGISTER] emu-cyd-1784573839 (cyd) tier=free schema=1.0
+============================================================
+  RAAMSES DEVICE EMULATOR
+  ID: emu-epaper-1784573839
+  Type: epaper
+  Target: 127.0.0.1:9999
+============================================================
+
+
+[EMULATOR] Connecting to 127.0.0.1:9999 ...
+[SERVER] New connection from ('127.0.0.1', 56184)
+[EMULATOR] Connected!
+[EMULATOR] [REGISTER] Sent for emu-epaper-1784573839 (E-Paper 200x200 1-bit)
+[SERVER] <- Register from emu-epaper-1784573839
+[SERVER] [REGISTER] emu-epaper-1784573839 (epaper) tier=free schema=1.0
+[EMULATOR] [REGISTER] Accepted: tier=free server_time=2026-07-20T18:57:19
