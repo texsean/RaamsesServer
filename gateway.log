@@ -1,8 +1,47 @@
-11:40:04 [INFO] root Starting RGS Gateway daemon on port 8765
-11:40:04 [INFO] rgs.server.gateway Raamses Gateway listening on 0.0.0.0:8765
-11:40:12 [INFO] rgs.server.session_registry Registered: agent-cyd-01 (type=cyd, schema=1.0)
-11:40:12 [INFO] rgs.server.gateway Registration accepted: agent-cyd-01 (type=cyd, fw=1.0.0)
-11:40:13 [INFO] rgs.server.session_registry Registered: agent-full-02 (type=full, schema=1.0)
-11:40:13 [INFO] rgs.server.gateway Registration accepted: agent-full-02 (type=full, fw=1.0.0)
-11:40:13 [INFO] rgs.server.session_registry Registered: agent-epaper-03 (type=epaper, schema=1.0)
-11:40:13 [INFO] rgs.server.gateway Registration accepted: agent-epaper-03 (type=epaper, fw=1.0.0)
+11:48:50 [INFO] root Starting RGS Gateway daemon on port 8765
+11:48:50 [INFO] rgs.server.gateway Raamses Gateway listening on 0.0.0.0:8765
+11:49:01 [INFO] rgs.server.session_registry Registered: agent-cyd-01 (type=cyd, schema=1.0)
+11:49:01 [INFO] rgs.server.gateway Registration accepted: agent-cyd-01 (type=cyd, fw=1.0.0)
+11:49:01 [INFO] rgs.server.gateway TASK agent-cyd-01: initialize monitoring
+11:49:01 [INFO] rgs.server.session_registry Registered: agent-full-02 (type=full, schema=1.0)
+11:49:01 [INFO] rgs.server.gateway Registration accepted: agent-full-02 (type=full, fw=1.0.0)
+11:49:01 [INFO] rgs.server.gateway TASK agent-full-02: initialize monitoring
+11:49:02 [INFO] rgs.server.session_registry Registered: agent-epaper-03 (type=epaper, schema=1.0)
+11:49:02 [INFO] rgs.server.gateway Registration accepted: agent-epaper-03 (type=epaper, fw=1.0.0)
+11:49:02 [INFO] rgs.server.gateway TASK agent-epaper-03: initialize monitoring
+11:49:03 [INFO] rgs.server.gateway TASK agent-cyd-01: 25% initialize monitoring
+11:49:03 [INFO] rgs.server.gateway TASK agent-full-02: 25% initialize monitoring
+11:49:04 [INFO] rgs.server.gateway TASK agent-epaper-03: 25% initialize monitoring
+11:49:05 [INFO] rgs.server.gateway TASK agent-cyd-01: 50% initialize monitoring
+11:49:05 [INFO] rgs.server.gateway TASK agent-full-02: 50% initialize monitoring
+11:49:06 [INFO] rgs.server.gateway TASK agent-epaper-03: 50% initialize monitoring
+11:49:07 [INFO] rgs.server.gateway TASK agent-cyd-01: 75% initialize monitoring
+11:49:07 [INFO] rgs.server.gateway TASK agent-full-02: 75% initialize monitoring
+11:49:08 [INFO] rgs.server.gateway TASK agent-epaper-03: 75% initialize monitoring
+11:49:09 [INFO] rgs.server.gateway TASK agent-cyd-01: 100% initialize monitoring
+11:49:09 [INFO] rgs.server.gateway TASK agent-cyd-01: collect sensor data
+11:49:09 [INFO] rgs.server.gateway TASK agent-full-02: 100% initialize monitoring
+11:49:09 [INFO] rgs.server.gateway TASK agent-full-02: collect sensor data
+11:49:10 [INFO] rgs.server.gateway TASK agent-epaper-03: 100% initialize monitoring
+11:49:10 [INFO] rgs.server.gateway TASK agent-epaper-03: collect sensor data
+11:49:11 [INFO] rgs.server.gateway TASK agent-cyd-01: 25% collect sensor data
+11:49:11 [INFO] rgs.server.gateway TASK agent-full-02: 25% collect sensor data
+11:49:12 [INFO] rgs.server.gateway TASK agent-epaper-03: 25% collect sensor data
+11:49:13 [INFO] rgs.server.gateway TASK agent-cyd-01: 50% collect sensor data
+11:49:13 [INFO] rgs.server.gateway TASK agent-full-02: 50% collect sensor data
+11:49:14 [INFO] rgs.server.gateway TASK agent-epaper-03: 50% collect sensor data
+11:49:15 [INFO] rgs.server.gateway TASK agent-cyd-01: 75% collect sensor data
+11:49:15 [INFO] rgs.server.gateway TASK agent-full-02: 75% collect sensor data
+11:49:16 [INFO] rgs.server.gateway TASK agent-epaper-03: 75% collect sensor data
+11:49:17 [INFO] rgs.server.gateway TASK agent-cyd-01: 100% collect sensor data
+11:49:17 [INFO] rgs.server.gateway TASK agent-cyd-01: process telemetry
+11:49:17 [INFO] rgs.server.gateway TASK agent-full-02: 100% collect sensor data
+11:49:17 [INFO] rgs.server.gateway TASK agent-full-02: process telemetry
+11:49:18 [INFO] rgs.server.gateway TASK agent-epaper-03: 100% collect sensor data
+11:49:18 [INFO] rgs.server.gateway TASK agent-epaper-03: process telemetry
+11:49:19 [INFO] rgs.server.gateway TASK agent-cyd-01: 25% process telemetry
+11:49:19 [INFO] rgs.server.gateway TASK agent-full-02: 25% process telemetry
+11:49:20 [INFO] rgs.server.gateway TASK agent-epaper-03: 25% process telemetry
+11:49:21 [INFO] rgs.server.gateway TASK agent-cyd-01: 50% process telemetry
+11:49:21 [INFO] rgs.server.gateway TASK agent-full-02: 50% process telemetry
+11:49:22 [INFO] rgs.server.gateway TASK agent-epaper-03: 50% process telemetry

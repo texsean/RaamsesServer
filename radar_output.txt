@@ -1,0 +1,138 @@
+[2J[H[36m╭─[0m[36m   RADAR — Raamses Agent Display And Reporter  │  Gateway: 127.0.0.1:8765  │  Agents: 3 (3 active)  │  2026-07-20 11[0m[36m─╮[0m
+[36m│[0m [1;32m● CONNECTED AGENTS[0m                                                                                                   [36m│[0m
+[36m│[0m  +----------+                                                                                                        [36m│[0m
+[36m│[0m  |  CYD     |                                                                                                        [36m│[0m
+[36m│[0m  | +--------+                                                                                                        [36m│[0m
+[36m│[0m  | |  [===] |                                                                                                        [36m│[0m
+[36m│[0m  | |  [===] |                                                                                                        [36m│[0m
+[36m│[0m  | +--------+                                                                                                        [36m│[0m
+[36m│[0m  +----------+                                                                                                        [36m│[0m
+[36m│[0m     [====O]                                                                                                          [36m│[0m
+[36m│[0m   agent-cyd-01  [32mactive[0m[39;49m  task=50% collect sensor data[0m                                                                 [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | FULL     |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +--------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |######  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |######  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +--------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m    [====O][0m                                                                                                          [36m│[0m
+[36m│[0m [39;49m  agent-full-0  [0m[32;49mactive[0m[39;49m  task=50% collect sensor data[0m                                                                 [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | E-PAPER  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +------+ |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | +------+ |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m  agent-epaper  [0m[32;49mactive[0m[39;49m  task=50% collect sensor data[0m                                                                 [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [1;34;49m◆ COMM[0m                                                                                                               [36m│[0m
+[36m│[0m [39;49m11:49:11 [INFO] rgs.server.gateway TASK agent-cyd-01: 25% collect sensor data[0m                                        [36m│[0m
+[36m│[0m [39;49m11:49:11 [INFO] rgs.server.gateway TASK agent-full-02: 25% collect sensor data[0m                                       [36m│[0m
+[36m│[0m [39;49m11:49:12 [INFO] rgs.server.gateway TASK agent-epaper-03: 25% collect sensor data[0m                                     [36m│[0m
+[36m│[0m [39;49m11:49:13 [INFO] rgs.server.gateway TASK agent-cyd-01: 50% collect sensor data[0m                                        [36m│[0m
+[36m│[0m [39;49m11:49:13 [INFO] rgs.server.gateway TASK agent-full-02: 50% collect sensor data[0m                                       [36m│[0m
+[36m│[0m [39;49m11:49:14 [INFO] rgs.server.gateway TASK agent-epaper-03: 50% collect sensor data[0m                                     [36m│[0m
+[36m│[0m [39;49m11:49:15 [INFO] rgs.server.gateway TASK agent-cyd-01: 75% collect sensor data[0m                                        [36m│[0m
+[36m│[0m [39;49m11:49:15 [INFO] rgs.server.gateway TASK agent-full-02: 75% collect sensor data[0m                                       [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [1;33;49m▸ TAIL[0m                                                                                                               [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯[0m
+[2J[H[36m╭─[0m[36m   RADAR — Raamses Agent Display And Reporter  │  Gateway: 127.0.0.1:8765  │  Agents: 3 (3 active)  │  2026-07-20 11[0m[36m─╮[0m
+[36m│[0m [1;32m● CONNECTED AGENTS[0m                                                                                                   [36m│[0m
+[36m│[0m  +----------+                                                                                                        [36m│[0m
+[36m│[0m  |  CYD     |                                                                                                        [36m│[0m
+[36m│[0m  | +--------+                                                                                                        [36m│[0m
+[36m│[0m  | |  [===] |                                                                                                        [36m│[0m
+[36m│[0m  | |  [===] |                                                                                                        [36m│[0m
+[36m│[0m  | +--------+                                                                                                        [36m│[0m
+[36m│[0m  +----------+                                                                                                        [36m│[0m
+[36m│[0m     [====O]                                                                                                          [36m│[0m
+[36m│[0m   agent-cyd-01  [32mactive[0m[39;49m  task=75% collect sensor data[0m                                                                 [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | FULL     |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +--------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |######  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |######  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +--------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m    [====O][0m                                                                                                          [36m│[0m
+[36m│[0m [39;49m  agent-full-0  [0m[32;49mactive[0m[39;49m  task=75% collect sensor data[0m                                                                 [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | E-PAPER  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +------+ |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | +------+ |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m  agent-epaper  [0m[32;49mactive[0m[39;49m  task=75% collect sensor data[0m                                                                 [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [1;34;49m◆ COMM[0m                                                                                                               [36m│[0m
+[36m│[0m [39;49m11:49:15 [INFO] rgs.server.gateway TASK agent-full-02: 75% collect sensor data[0m                                       [36m│[0m
+[36m│[0m [39;49m11:49:16 [INFO] rgs.server.gateway TASK agent-epaper-03: 75% collect sensor data[0m                                     [36m│[0m
+[36m│[0m [39;49m11:49:17 [INFO] rgs.server.gateway TASK agent-cyd-01: 100% collect sensor data[0m                                       [36m│[0m
+[36m│[0m [39;49m11:49:17 [INFO] rgs.server.gateway TASK agent-cyd-01: process telemetry[0m                                              [36m│[0m
+[36m│[0m [39;49m11:49:17 [INFO] rgs.server.gateway TASK agent-full-02: 100% collect sensor data[0m                                      [36m│[0m
+[36m│[0m [39;49m11:49:17 [INFO] rgs.server.gateway TASK agent-full-02: process telemetry[0m                                             [36m│[0m
+[36m│[0m [39;49m11:49:18 [INFO] rgs.server.gateway TASK agent-epaper-03: 100% collect sensor data[0m                                    [36m│[0m
+[36m│[0m [39;49m11:49:18 [INFO] rgs.server.gateway TASK agent-epaper-03: process telemetry[0m                                           [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [1;33;49m▸ TAIL[0m                                                                                                               [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯[0m
+[2J[H[36m╭─[0m[36m   RADAR — Raamses Agent Display And Reporter  │  Gateway: 127.0.0.1:8765  │  Agents: 3 (3 active)  │  2026-07-20 11[0m[36m─╮[0m
+[36m│[0m [1;32m● CONNECTED AGENTS[0m                                                                                                   [36m│[0m
+[36m│[0m  +----------+                                                                                                        [36m│[0m
+[36m│[0m  |  CYD     |                                                                                                        [36m│[0m
+[36m│[0m  | +--------+                                                                                                        [36m│[0m
+[36m│[0m  | |  [===] |                                                                                                        [36m│[0m
+[36m│[0m  | |  [===] |                                                                                                        [36m│[0m
+[36m│[0m  | +--------+                                                                                                        [36m│[0m
+[36m│[0m  +----------+                                                                                                        [36m│[0m
+[36m│[0m     [====O]                                                                                                          [36m│[0m
+[36m│[0m   agent-cyd-01  [32mactive[0m[39;49m  task=25% process telemetry[0m                                                                   [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | FULL     |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +--------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |######  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |######  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +--------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m    [====O][0m                                                                                                          [36m│[0m
+[36m│[0m [39;49m  agent-full-0  [0m[32;49mactive[0m[39;49m  task=process telemetry[0m                                                                       [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | E-PAPER  |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | +------+ |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | |  ---  |[0m                                                                                                         [36m│[0m
+[36m│[0m [39;49m | +------+ |[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m +----------+[0m                                                                                                        [36m│[0m
+[36m│[0m [39;49m  agent-epaper  [0m[32;49mactive[0m[39;49m  task=process telemetry[0m                                                                       [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [1;34;49m◆ COMM[0m                                                                                                               [36m│[0m
+[36m│[0m [39;49m11:49:17 [INFO] rgs.server.gateway TASK agent-cyd-01: process telemetry[0m                                              [36m│[0m
+[36m│[0m [39;49m11:49:17 [INFO] rgs.server.gateway TASK agent-full-02: 100% collect sensor data[0m                                      [36m│[0m
+[36m│[0m [39;49m11:49:17 [INFO] rgs.server.gateway TASK agent-full-02: process telemetry[0m                                             [36m│[0m
+[36m│[0m [39;49m11:49:18 [INFO] rgs.server.gateway TASK agent-epaper-03: 100% collect sensor data[0m                                    [36m│[0m
+[36m│[0m [39;49m11:49:18 [INFO] rgs.server.gateway TASK agent-epaper-03: process telemetry[0m                                           [36m│[0m
+[36m│[0m [39;49m11:49:19 [INFO] rgs.server.gateway TASK agent-cyd-01: 25% process telemetry[0m                                          [36m│[0m
+[36m│[0m [39;49m11:49:19 [INFO] rgs.server.gateway TASK agent-full-02: 25% process telemetry[0m                                         [36m│[0m
+[36m│[0m [39;49m11:49:20 [INFO] rgs.server.gateway TASK agent-epaper-03: 25% process telemetry[0m                                       [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m│[0m [1;33;49m▸ TAIL[0m                                                                                                               [36m│[0m
+[36m│[0m                                                                                                                      [36m│[0m
+[36m╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯[0m
