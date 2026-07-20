@@ -1,0 +1,12 @@
+/home/pi/RaamsesServer/src/windows/build/CMakeFiles/rgs_server_windows.dir
+/home/pi/RaamsesServer/src/windows/build/CMakeFiles/edit_cache.dir
+/home/pi/RaamsesServer/src/windows/build/CMakeFiles/rebuild_cache.dir
+/home/pi/RaamsesServer/src/windows/build/core/CMakeFiles/rgs_core.dir
+/home/pi/RaamsesServer/src/windows/build/core/CMakeFiles/edit_cache.dir
+/home/pi/RaamsesServer/src/windows/build/core/CMakeFiles/rebuild_cache.dir
+/home/pi/RaamsesServer/src/windows/build/logging/CMakeFiles/rgs_logging.dir
+/home/pi/RaamsesServer/src/windows/build/logging/CMakeFiles/edit_cache.dir
+/home/pi/RaamsesServer/src/windows/build/logging/CMakeFiles/rebuild_cache.dir
+/home/pi/RaamsesServer/src/windows/build/verifier/CMakeFiles/rgs_verifier.dir
+/home/pi/RaamsesServer/src/windows/build/verifier/CMakeFiles/edit_cache.dir
+/home/pi/RaamsesServer/src/windows/build/verifier/CMakeFiles/rebuild_cache.dir

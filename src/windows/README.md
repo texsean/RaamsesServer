@@ -1,23 +1,45 @@
 # RGS Windows
 
-Windows build of the **RGS** (Raamses Gateway Server).
+Windows build of the **RGS (Raamses Gateway Server)**.
 
-## Project Structure
+## Prerequisites
 
-- `src/linux/` — Linux C++ / Python implementation
-- `src/windows/` — Windows C++ implementation (this folder)
-- `src/android/` — Android console app (Kotlin/Jetpack Compose)
+- Visual Studio 2022 (or newer) with C++23 support
+- CMake 3.26+
+- Windows SDK
 
 ## Building
 
-TODO: Add Windows build instructions once C++23 implementation is ported.
+```bash
+cd src/windows
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
 
-The Windows build targets:
-- Visual Studio 2022 / MSVC
-- C++23
-- Windows Subsystem for Linux (WSL) alternative path
+## Architecture
+
+The Windows build shares core logic with the Linux build:
+- **core/** — ConfigLoader (INI-style config parsing)
+- **logging/** — Thread-safe logger with timestamped output
+- **verifier/** — Agent task verification engine
+
+Platform-specific code:
+- Networking (Winsock on Windows, POSIX sockets on Linux)
+- Threading (std::thread is cross-platform)
+- File I/O (std::fstream is cross-platform)
+
+## Config
+
+Place `rgs.config` in the working directory:
+
+```
+port=8765
+heartbeat=30
+log_level=info
+```
 
 ## Notes
 
-The protocol, message types, and gateway routing are shared across platforms.
-Only the network I/O and platform-specific code differ.
+- The C++ code targets C++23 and uses `#ifdef _WIN32` for platform-specific sections
+- The Python gateway (port 8765) and Android console (port 42000, JSON protocol) are separate
+- This Windows build will provide the same gateway functionality as the Linux version

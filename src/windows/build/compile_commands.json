@@ -1,0 +1,26 @@
+[
+{
+  "directory": "/home/pi/RaamsesServer/src/windows/build",
+  "command": "/usr/bin/c++  -I/home/pi/RaamsesServer/src/windows/core -I/home/pi/RaamsesServer/src/windows/logging -I/home/pi/RaamsesServer/src/windows/verifier -I/home/pi/RaamsesServer/src/windows/verifier/.. -O3 -DNDEBUG -std=gnu++23 -Wall -Wextra -Wpedantic -o CMakeFiles/rgs_server_windows.dir/main.cpp.o -c /home/pi/RaamsesServer/src/windows/main.cpp",
+  "file": "/home/pi/RaamsesServer/src/windows/main.cpp",
+  "output": "CMakeFiles/rgs_server_windows.dir/main.cpp.o"
+},
+{
+  "directory": "/home/pi/RaamsesServer/src/windows/build/core",
+  "command": "/usr/bin/c++  -I/home/pi/RaamsesServer/src/windows/core -O3 -DNDEBUG -std=gnu++23 -Wall -Wextra -Wpedantic -o CMakeFiles/rgs_core.dir/ConfigLoader.cpp.o -c /home/pi/RaamsesServer/src/windows/core/ConfigLoader.cpp",
+  "file": "/home/pi/RaamsesServer/src/windows/core/ConfigLoader.cpp",
+  "output": "core/CMakeFiles/rgs_core.dir/ConfigLoader.cpp.o"
+},
+{
+  "directory": "/home/pi/RaamsesServer/src/windows/build/logging",
+  "command": "/usr/bin/c++  -I/home/pi/RaamsesServer/src/windows/logging -O3 -DNDEBUG -std=gnu++23 -Wall -Wextra -Wpedantic -o CMakeFiles/rgs_logging.dir/Logger.cpp.o -c /home/pi/RaamsesServer/src/windows/logging/Logger.cpp",
+  "file": "/home/pi/RaamsesServer/src/windows/logging/Logger.cpp",
+  "output": "logging/CMakeFiles/rgs_logging.dir/Logger.cpp.o"
+},
+{
+  "directory": "/home/pi/RaamsesServer/src/windows/build/verifier",
+  "command": "/usr/bin/c++  -I/home/pi/RaamsesServer/src/windows/verifier -I/home/pi/RaamsesServer/src/windows/verifier/.. -I/home/pi/RaamsesServer/src/windows/logging -O3 -DNDEBUG -std=gnu++23 -Wall -Wextra -Wpedantic -o CMakeFiles/rgs_verifier.dir/Verifier.cpp.o -c /home/pi/RaamsesServer/src/windows/verifier/Verifier.cpp",
+  "file": "/home/pi/RaamsesServer/src/windows/verifier/Verifier.cpp",
+  "output": "verifier/CMakeFiles/rgs_verifier.dir/Verifier.cpp.o"
+}
+]

@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/rgs_server_windows.dir/link.d CMakeFiles/rgs_server_windows.dir/main.cpp.o -o rgs_server_windows  core/librgs_core.a logging/librgs_logging.a verifier/librgs_verifier.a logging/librgs_logging.a

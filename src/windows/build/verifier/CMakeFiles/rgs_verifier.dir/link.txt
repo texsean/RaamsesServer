@@ -1,0 +1,2 @@
+/usr/bin/ar qc librgs_verifier.a CMakeFiles/rgs_verifier.dir/Verifier.cpp.o
+/usr/bin/ranlib librgs_verifier.a
