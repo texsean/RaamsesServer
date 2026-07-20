@@ -6,31 +6,278 @@
 
 ============================================================
   RAAMSES DEVICE EMULATOR
-  ID: emu-cyd-1784573839
-  Type: cyd
-  Target: 127.0.0.1:9999
-============================================================
-
-
-[EMULATOR] Connecting to 127.0.0.1:9999 ...
-[EMULATOR] Connected!
-[EMULATOR] [REGISTER] Sent for emu-cyd-1784573839 (CYD 2.8" Color)
-[SERVER] New connection from ('127.0.0.1', 56178)
-[SERVER] <- Register from emu-cyd-1784573839
-[EMULATOR] [REGISTER] Accepted: tier=free server_time=2026-07-20T18:57:19
-[SERVER] [REGISTER] emu-cyd-1784573839 (cyd) tier=free schema=1.0
-============================================================
-  RAAMSES DEVICE EMULATOR
-  ID: emu-epaper-1784573839
+  ID: emu-epaper-1784588927
   Type: epaper
   Target: 127.0.0.1:9999
 ============================================================
 
 
 [EMULATOR] Connecting to 127.0.0.1:9999 ...
-[SERVER] New connection from ('127.0.0.1', 56184)
 [EMULATOR] Connected!
-[EMULATOR] [REGISTER] Sent for emu-epaper-1784573839 (E-Paper 200x200 1-bit)
-[SERVER] <- Register from emu-epaper-1784573839
-[SERVER] [REGISTER] emu-epaper-1784573839 (epaper) tier=free schema=1.0
-[EMULATOR] [REGISTER] Accepted: tier=free server_time=2026-07-20T18:57:19
+[EMULATOR] [REGISTER] Sent for emu-epaper-1784588927 (E-Paper 200x200 1-bit)
+============================================================
+  RAAMSES DEVICE EMULATOR
+  ID: emu-cyd-1784588927
+  Type: cyd
+  Target: 127.0.0.1:9999
+============================================================
+
+
+[EMULATOR] Connecting to 127.0.0.1:9999 ...
+[SERVER] New connection from ('127.0.0.1', 34286)
+[EMULATOR] Connected!
+[EMULATOR] [REGISTER] Sent for emu-cyd-1784588927 (CYD 2.8" Color)
+[SERVER] <- Register from emu-epaper-1784588927
+[SERVER] [REGISTER] emu-epaper-1784588927 (epaper) tier=free schema=1.0
+[SERVER] New connection from ('127.0.0.1', 34298)
+[SERVER] <- Register from emu-cyd-1784588927
+[SERVER] [REGISTER] emu-cyd-1784588927 (cyd) tier=free schema=1.0
+[EMULATOR] [REGISTER] Accepted: tier=free server_time=2026-07-20T23:08:47
+[EMULATOR] [REGISTER] Accepted: tier=free server_time=2026-07-20T23:08:47
+[EMULATOR] [92m[ALERT] [INFO] Welcome: Device epaper registered successfully[0m
+[EMULATOR] [93m[ALERT] [WARNING] Network Unstable: Signal strength fluctuating - connection may drop[0m
+[EMULATOR] [HEARTBEAT] uptime=7s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=7s battery=78%
+[SERVER] [COMMAND] -> emu-epaper-1784588927: sync_clock
+[EMULATOR] [COMMAND] <- sync_clock (id=26b40991)
+[SERVER] <- CommandResult from emu-epaper-1784588927
+[SERVER] <- CommandResult: {'command_id': '26b40991-40eb-4b7d-a866-e87cebb4f3d0', 'success': False, 'message': 'Command failed'}
+[EMULATOR] [HEARTBEAT] uptime=9s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=9s
+[EMULATOR] [91m[ALERT] [CRITICAL] Memory Critical: Free memory below 5% - immediate action needed[0m
+[EMULATOR] [HEARTBEAT] uptime=14s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=14s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=16s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=16s
+[EMULATOR] [92m[ALERT] [INFO] Firmware Update: New firmware v1.2.0 available for your device[0m
+[EMULATOR] [HEARTBEAT] uptime=23s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=23s
+[EMULATOR] [HEARTBEAT] uptime=23s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=23s battery=78%
+[SERVER] [COMMAND] -> emu-epaper-1784588927: capture_screenshot
+[EMULATOR] [COMMAND] <- capture_screenshot (id=21bd8ea4)
+[SERVER] <- CommandResult from emu-epaper-1784588927
+[SERVER] <- CommandResult: {'command_id': '21bd8ea4-efe9-4ca5-bcbc-f6ea43d57d9f', 'success': True, 'message': "Command 'capture_screenshot' completed"}
+[EMULATOR] [93m[ALERT] [WARNING] Network Unstable: Signal strength fluctuating - connection may drop[0m
+[EMULATOR] [HEARTBEAT] uptime=30s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=30s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=31s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=31s
+[EMULATOR] [93m[ALERT] [WARNING] Network Unstable: Signal strength fluctuating - connection may drop[0m
+[EMULATOR] [HEARTBEAT] uptime=36s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=36s
+[EMULATOR] [COMMAND] <- restart_agent (id=04763fcf)
+[SERVER] [COMMAND] -> emu-cyd-1784588927: restart_agent
+[SERVER] <- CommandResult from emu-cyd-1784588927
+[SERVER] <- CommandResult: {'command_id': '04763fcf-7de2-4699-8dec-c4a88b81ca89', 'success': True, 'message': "Command 'restart_agent' completed"}
+[EMULATOR] [HEARTBEAT] uptime=39s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=39s battery=78%
+[EMULATOR] [91m[ALERT] [CRITICAL] High Temperature: Device CPU temp exceeded 85C threshold[0m
+[EMULATOR] [HEARTBEAT] uptime=45s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=45s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=46s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=46s
+[EMULATOR] [92m[ALERT] [INFO] Firmware Update: New firmware v1.2.0 available for your device[0m
+[EMULATOR] [HEARTBEAT] uptime=51s
+[EMULATOR] [HEARTBEAT] uptime=51s battery=78%
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=51s
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=51s battery=78%
+[SERVER] [COMMAND] -> emu-epaper-1784588927: update_firmware
+[EMULATOR] [COMMAND] <- update_firmware (id=d42ec279)
+[SERVER] <- CommandResult from emu-epaper-1784588927
+[SERVER] <- CommandResult: {'command_id': 'd42ec279-1be2-4202-a5a9-31954ee49362', 'success': True, 'message': "Command 'update_firmware' completed"}
+[EMULATOR] [HEARTBEAT] uptime=56s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=56s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=57s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=57s
+[EMULATOR] [91m[ALERT] [CRITICAL] Security Alert: Unauthorized access attempt detected on device[0m
+[EMULATOR] [HEARTBEAT] uptime=64s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=64s
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=64s battery=78%
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=64s
+[SERVER] [COMMAND] -> emu-cyd-1784588927: run_diagnostic
+[EMULATOR] [COMMAND] <- run_diagnostic (id=312ff3a8)
+[SERVER] <- CommandResult from emu-cyd-1784588927
+[SERVER] <- CommandResult: {'command_id': '312ff3a8-67dd-44d5-94af-d1c84eedb7e2', 'success': True, 'message': "Command 'run_diagnostic' completed"}
+[EMULATOR] [HEARTBEAT] uptime=70s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=70s
+[EMULATOR] [HEARTBEAT] uptime=72s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=72s battery=78%
+[EMULATOR] [91m[ALERT] [CRITICAL] High Temperature: Device CPU temp exceeded 85C threshold[0m
+[EMULATOR] [91m[ALERT] [CRITICAL] Memory Critical: Free memory below 5% - immediate action needed[0m
+[EMULATOR] [HEARTBEAT] uptime=77s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=77s
+[EMULATOR] [HEARTBEAT] uptime=79s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=79s battery=78%
+[EMULATOR] [COMMAND] <- restart_agent (id=b82a14c4)
+[SERVER] [COMMAND] -> emu-epaper-1784588927: restart_agent
+[SERVER] <- CommandResult from emu-epaper-1784588927
+[SERVER] <- CommandResult: {'command_id': 'b82a14c4-8032-4087-a163-71f6a1522284', 'success': True, 'message': "Command 'restart_agent' completed"}
+[EMULATOR] [91m[ALERT] [CRITICAL] High Temperature: Device CPU temp exceeded 85C threshold[0m
+[EMULATOR] [HEARTBEAT] uptime=85s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=85s
+[EMULATOR] [COMMAND] <- run_diagnostic (id=221fd5d3)
+[SERVER] [COMMAND] -> emu-cyd-1784588927: run_diagnostic
+[SERVER] <- CommandResult from emu-cyd-1784588927
+[SERVER] <- CommandResult: {'command_id': '221fd5d3-b302-49e4-812b-a8aa51290f9c', 'success': True, 'message': "Command 'run_diagnostic' completed"}
+[EMULATOR] [93m[ALERT] [WARNING] Low Battery: Device battery at 15% - charging required[0m
+[EMULATOR] [HEARTBEAT] uptime=88s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=88s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=93s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=93s
+[EMULATOR] [HEARTBEAT] uptime=95s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=95s battery=78%
+[EMULATOR] [93m[ALERT] [WARNING] Network Unstable: Signal strength fluctuating - connection may drop[0m
+[EMULATOR] [HEARTBEAT] uptime=100s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=100s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=101s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=101s
+[EMULATOR] [93m[ALERT] [WARNING] Network Unstable: Signal strength fluctuating - connection may drop[0m
+[EMULATOR] [93m[ALERT] [WARNING] Network Unstable: Signal strength fluctuating - connection may drop[0m
+[EMULATOR] [HEARTBEAT] uptime=108s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=108s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=108s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=108s
+[EMULATOR] [HEARTBEAT] uptime=114s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=114s
+[EMULATOR] [HEARTBEAT] uptime=117s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=117s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=122s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=122s
+[EMULATOR] [HEARTBEAT] uptime=122s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=122s battery=78%
+[EMULATOR] [92m[ALERT] [INFO] Firmware Update: New firmware v1.2.0 available for your device[0m
+[EMULATOR] [HEARTBEAT] uptime=128s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=128s battery=78%
+[EMULATOR] [92m[ALERT] [INFO] Agent Status: Sub-agent completed task successfully[0m
+[EMULATOR] [HEARTBEAT] uptime=130s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=130s
+[EMULATOR] [HEARTBEAT] uptime=134s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=134s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=135s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=135s
+[EMULATOR] [HEARTBEAT] uptime=140s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=140s
+[EMULATOR] [91m[ALERT] [CRITICAL] Security Alert: Unauthorized access attempt detected on device[0m
+[EMULATOR] [HEARTBEAT] uptime=143s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=143s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=148s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=148s
+[EMULATOR] [HEARTBEAT] uptime=153s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=153s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=154s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=154s
+[EMULATOR] [HEARTBEAT] uptime=158s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=158s battery=78%
+[EMULATOR] [91m[ALERT] [CRITICAL] Memory Critical: Free memory below 5% - immediate action needed[0m
+[EMULATOR] [HEARTBEAT] uptime=162s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=162s
+[EMULATOR] [93m[ALERT] [WARNING] Disk Space: Storage usage at 90% - cleanup recommended[0m
+[EMULATOR] [91m[ALERT] [CRITICAL] Security Alert: Unauthorized access attempt detected on device[0m
+[EMULATOR] [HEARTBEAT] uptime=167s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=167s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=172s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=172s
+[EMULATOR] [COMMAND] <- run_task (id=5d7028d1)
+[SERVER] [COMMAND] -> emu-cyd-1784588927: run_task
+[SERVER] <- CommandResult from emu-cyd-1784588927
+[SERVER] <- CommandResult: {'command_id': '5d7028d1-1784-495d-bd84-cad5151941d6', 'success': True, 'message': "Command 'run_task' completed"}
+[EMULATOR] [HEARTBEAT] uptime=176s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=176s battery=78%
+[EMULATOR] [COMMAND] <- run_diagnostic (id=9780ff31)
+[SERVER] [COMMAND] -> emu-epaper-1784588927: run_diagnostic
+[SERVER] <- CommandResult from emu-epaper-1784588927
+[SERVER] <- CommandResult: {'command_id': '9780ff31-65d9-4bcd-85fa-db79d2d67bf3', 'success': False, 'message': 'Command failed'}
+[EMULATOR] [93m[ALERT] [WARNING] Low Battery: Device battery at 15% - charging required[0m
+[EMULATOR] [HEARTBEAT] uptime=181s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=181s
+[EMULATOR] [HEARTBEAT] uptime=185s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=185s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=187s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=187s
+[EMULATOR] [HEARTBEAT] uptime=192s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=192s
+[EMULATOR] [HEARTBEAT] uptime=193s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=193s battery=78%
+[EMULATOR] [COMMAND] <- run_task (id=a6fb2d63)
+[SERVER] [COMMAND] -> emu-epaper-1784588927: run_task
+[SERVER] <- CommandResult from emu-epaper-1784588927
+[SERVER] <- CommandResult: {'command_id': 'a6fb2d63-d0c1-40c7-bcb0-e152e585046d', 'success': True, 'message': "Command 'run_task' completed"}
+[EMULATOR] [HEARTBEAT] uptime=197s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=197s
+[EMULATOR] [HEARTBEAT] uptime=203s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=203s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=206s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=206s
+[EMULATOR] [HEARTBEAT] uptime=211s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=211s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=216s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=216s
+[EMULATOR] [91m[ALERT] [CRITICAL] Security Alert: Unauthorized access attempt detected on device[0m
+[EMULATOR] [HEARTBEAT] uptime=219s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=219s battery=78%
+[EMULATOR] [HEARTBEAT] uptime=226s
+[SERVER] <- Heartbeat from emu-cyd-1784588927
+[SERVER] [HEARTBEAT] emu-cyd-1784588927 uptime=226s
+[EMULATOR] [HEARTBEAT] uptime=226s battery=78%
+[SERVER] <- Heartbeat from emu-epaper-1784588927
+[SERVER] [HEARTBEAT] emu-epaper-1784588927 uptime=226s battery=78%

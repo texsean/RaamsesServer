@@ -15,14 +15,14 @@ import argparse
 import sys
 import os
 
-# Ensure the python directory is on sys.path
-# launcher.py is at src/python/raamses/launcher.py
-_python_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _python_dir not in sys.path:
-    sys.path.insert(0, _python_dir)
+# Ensure the rgs package directory is on sys.path
+# launcher.py is at src/linux/rgs/launcher.py
+_rgs_dir = os.path.dirname(os.path.abspath(__file__))
+if _rgs_dir not in sys.path:
+    sys.path.insert(0, _rgs_dir)
 
-from raamses.server.mock_server import MockRaamsesServer
-from raamses.client.device_emulator import DeviceEmulator
+from rgs.server.mock_server import MockRaamsesServer
+from rgs.client.device_emulator import DeviceEmulator
 
 
 async def run_server(port: int):

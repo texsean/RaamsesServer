@@ -11,8 +11,15 @@ import time
 import os
 import sys
 import signal
+import argparse
+import re
 
-RAAMSES_LOG = "/tmp/raamses_server_live.log"
+# Accept --log argument for the log file to monitor
+_parser = argparse.ArgumentParser()
+_parser.add_argument("--log", default="/tmp/raamses_server_live.log", help="Server log file to monitor")
+_args = _parser.parse_args()
+
+RAAMSES_LOG = _args.log
 RAAMSES_STATE = "/tmp/raamses_state.json"
 
 class LiveMonitor:
@@ -24,6 +31,9 @@ class LiveMonitor:
         self.start_time = time.time()
 
     def parse_log_line(self, line):
+        line = line.strip()
+        # Strip ANSI escape codes before parsing
+        line = re.sub(r'\x1b\[[0-9;]*m', '', line)
         line = line.strip()
         if "[SERVER] [REGISTER]" in line:
             # Parse: [REGISTER] cyd-001 (cyd) tier=free schema=1.0

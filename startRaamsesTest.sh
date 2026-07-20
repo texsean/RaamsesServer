@@ -257,7 +257,7 @@ start_monitor() {
     if [[ "$MONITOR" == true ]] || [[ " ${DEVICE_TYPES[*]} " =~ " DesktopFull " ]]; then
         if [[ -f "$MONITOR_PY" ]]; then
             print_status "Starting live dashboard..." "▶" "$CYAN"
-            $VENV_PYTHON "$MONITOR_PY" >> "$LOG_FILE" 2>&1 &
+            $VENV_PYTHON "$MONITOR_PY" --log "$LOG_FILE" >> "$LOG_FILE" 2>&1 &
             local pid=$!
             PIDS+=($pid)
             print_status "Dashboard running" "✓" "$GREEN"
@@ -403,6 +403,41 @@ main() {
     fi
 
     validate
+
+    # Kill any existing processes on our port
+    echo ""
+    echo -e "${BOLD}Cleaning up port conflicts...${NC}"
+    local existing_pids
+    existing_pids=$(ss -tlnp "sport = :$PORT" 2>/dev/null | grep -oP 'pid=\K\d+' || true)
+    if [[ -n "$existing_pids" ]]; then
+        echo -e "  ${YELLOW}Found existing processes on port $PORT, killing...${NC}"
+        echo "$existing_pids" | while read -r pid; do
+            [[ -n "$pid" ]] && kill "$pid" 2>/dev/null || true
+        done
+        sleep 1
+    fi
+    
+    # Also kill any leftover raamses/emulator python processes
+    local raamses_pids
+    raamses_pids=$(pgrep -f "mock_server.py" -u "$(whoami)" 2>/dev/null || true)
+    if [[ -n "$raamses_pids" ]]; then
+        echo -e "  ${YELLOW}Found leftover mock server processes, killing...${NC}"
+        echo "$raamses_pids" | while read -r pid; do
+            [[ -n "$pid" ]] && kill "$pid" 2>/dev/null || true
+        done
+        sleep 0.5
+    fi
+    
+    local emulator_pids
+    emulator_pids=$(pgrep -f "device_emulator.py" -u "$(whoami)" 2>/dev/null || true)
+    if [[ -n "$emulator_pids" ]]; then
+        echo -e "  ${YELLOW}Found leftover emulator processes, killing...${NC}"
+        echo "$emulator_pids" | while read -r pid; do
+            [[ -n "$pid" ]] && kill "$pid" 2>/dev/null || true
+        done
+        sleep 0.5
+    fi
+    echo -e "  ${GREEN}Port $PORT is ready.${NC}"
 
     echo ""
     echo -e "${BOLD}Starting services...${NC}"
