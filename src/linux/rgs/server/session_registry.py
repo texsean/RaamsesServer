@@ -55,12 +55,17 @@ class SessionRegistry:
     def __init__(self, heartbeat_timeout: int = 90):
         self._heartbeat_timeout = heartbeat_timeout
         self._sessions: dict[str, AgentSession] = {}
+        self._conn_index: dict[int, str] = {}  # id(conn) -> device_id reverse index
         self._lock = threading.RLock()
 
     def register(self, device_id: str, device_type: str,
                  schema_version: str, firmware_version: Optional[str] = None,
-                 capabilities: Optional[dict] = None) -> AgentSession:
-        """Register or re-register an agent. Returns the session object."""
+                 capabilities: Optional[dict] = None,
+                 connection: object = None) -> AgentSession:
+        """Register or re-register an agent. Returns the session object.
+        
+        Optionally accepts a connection object for O(1) lookup by connection.
+        """
         with self._lock:
             if device_id in self._sessions:
                 session = self._sessions[device_id]
@@ -84,12 +89,29 @@ class SessionRegistry:
                 self._sessions[device_id] = session
                 logger.info("Registered: %s (type=%s, schema=%s)",
                             device_id, device_type, schema_version)
+
+            # Update connection index if a connection was provided
+            if connection is not None:
+                conn_id = id(connection)
+                # Remove old entry if re-registering
+                if device_id in self._conn_index.values():
+                    old_conn_id = [k for k, v in self._conn_index.items() if v == device_id]
+                    for k in old_conn_id:
+                        del self._conn_index[k]
+                self._conn_index[conn_id] = device_id
+
             return session
 
     def unregister(self, device_id: str) -> Optional[AgentSession]:
         """Remove an agent from the registry. Returns the removed session."""
         with self._lock:
-            return self._sessions.pop(device_id, None)
+            session = self._sessions.pop(device_id, None)
+            if session is not None:
+                # Also remove from connection index
+                stale_keys = [k for k, v in self._conn_index.items() if v == device_id]
+                for k in stale_keys:
+                    del self._conn_index[k]
+            return session
 
     def get(self, device_id: str) -> Optional[AgentSession]:
         """Look up a session by device_id."""
@@ -132,6 +154,10 @@ class SessionRegistry:
                     session.status = "offline"
                     logger.warning("Stale agent removed: %s (last heartbeat %s)",
                                    dev_id, session.last_heartbeat)
+                    # Clean up connection index
+                    stale_keys = [k for k, v in self._conn_index.items() if v == dev_id]
+                    for k in stale_keys:
+                        del self._conn_index[k]
         return stale
 
     def count(self) -> int:
@@ -139,8 +165,13 @@ class SessionRegistry:
             return len(self._sessions)
 
     def get_session_by_connection(self, conn) -> Optional[AgentSession]:
-        """Look up a session by its TCP connection object."""
+        """Look up a session by its TCP connection object (O(1) via reverse index)."""
         with self._lock:
+            conn_id = id(conn)
+            device_id = self._conn_index.get(conn_id)
+            if device_id is not None:
+                return self._sessions.get(device_id)
+            # Fallback: O(n) scan for connections not in the index
             for session in self._sessions.values():
                 if session.connection is conn:
                     return session

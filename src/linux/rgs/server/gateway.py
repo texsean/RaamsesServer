@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import socket
 import threading
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -49,6 +50,8 @@ class GatewayServer:
         self._registry = SessionRegistry(heartbeat_timeout=heartbeat_timeout)
         self._router: Optional[MessageRouter] = None
         self._connections: dict[str, socket.socket] = {}  # device_id -> socket
+        self._stale_check_interval = 30  # seconds between stale-agent checks
+        self._cleanup_thread: Optional[threading.Thread] = None
 
     # ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -63,6 +66,14 @@ class GatewayServer:
 
         logger.info("Raamses Gateway listening on %s:%d", self._host, self._port)
         print(f"[Gateway] Listening on {self._host}:{self._port}")
+
+        # Start stale-agent cleanup thread
+        self._cleanup_thread = threading.Thread(
+            target=self._stale_cleanup_loop,
+            daemon=True,
+            name="stale-cleanup",
+        )
+        self._cleanup_thread.start()
 
         # Main accept loop runs in the calling thread
         while self._running:
@@ -141,7 +152,7 @@ class GatewayServer:
             self.stop()
             return "Gateway shutting down"
 
-        if cmd.startswith("agents") or cmd in ("list", "agents"):
+        if cmd.startswith("agents") or cmd == "list":
             sessions = self._registry.list_active()
             lines = [f"Connected agents ({len(sessions)}):"]
             for s in sessions:
@@ -258,7 +269,7 @@ class GatewayServer:
         # This is a registered agent — process by its actual device_id
         actual_id = session.device_id
 
-        # Check if this is a heartbeat from a registered agent
+        # Check for heartbeat from a registered agent
         if text.lower().startswith("heartbeat") or text == "PING":
             if self._registry.heartbeat(actual_id):
                 self._send_to_client(conn, "OK: heartbeat received")
@@ -283,7 +294,8 @@ class GatewayServer:
         # Format: REGISTER:<device_id>|<device_type>|<schema_version>[|<firmware>]
         parts = text.replace("REGISTER:", "").split("|")
         if len(parts) < 3:
-            self._send_to_client(conn, "ERROR: REGISTER format: REGISTER:<device_id>|<type>|<schema>[|<firmware>]")
+            self._send_to_client(conn,
+                "ERROR: REGISTER format: REGISTER:<device_id>|<type>|<schema>[|<firmware>]")
             return
 
         dev_id = parts[0].strip()
@@ -291,8 +303,8 @@ class GatewayServer:
         schema_ver = parts[2].strip()
         firmware = parts[3].strip() if len(parts) > 3 else None
 
-        session = self._registry.register(dev_id, dev_type, schema_ver, firmware)
-        session.connection = conn
+        session = self._registry.register(dev_id, dev_type, schema_ver, firmware,
+                                          connection=conn)
 
         with self._lock:
             self._connections[dev_id] = conn
@@ -302,8 +314,9 @@ class GatewayServer:
             f"{schema_ver}|rgs-gateway"
         )
         self._send_to_client(conn, ack)
-        logger.info("Registration accepted: %s (type=%s, fw=%s)",
-                     dev_id, dev_type, firmware)
+        logger.info("Registration accepted: %s (type=%s, schema=%s, fw=%s, addr=%s:%d)",
+                     dev_id, dev_type, schema_ver, firmware or "none",
+                     *conn.getpeername())
 
     # ── I/O Helpers ────────────────────────────────────────────────────────
 
@@ -322,6 +335,29 @@ class GatewayServer:
 
         status_icon = "✓" if status == "delivered" else "✗" if status == "dropped" else "→"
         return f"[{status_icon.upper()}] {status} — {message}"
+
+    # ── Stale-Agent Cleanup ────────────────────────────────────────────────
+
+    def _stale_cleanup_loop(self) -> None:
+        """Periodically remove agents whose heartbeats have timed out."""
+        while self._running:
+            time.sleep(self._stale_check_interval)
+            try:
+                removed = self._registry.remove_stale()
+                if removed:
+                    logger.info("Cleaned up %d stale agent(s): %s",
+                                len(removed), ", ".join(removed[:5]))
+                    # Also close their socket connections
+                    with self._lock:
+                        for dev_id in removed:
+                            conn = self._connections.pop(dev_id, None)
+                            if conn:
+                                try:
+                                    conn.close()
+                                except OSError:
+                                    pass
+            except Exception:
+                logger.exception("Error during stale-agent cleanup")
 
     # ── Accessors ──────────────────────────────────────────────────────────
 

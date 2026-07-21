@@ -19,7 +19,7 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'linux'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # src/linux/
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -242,96 +242,12 @@ class RADARConsole:
             style="bold cyan",
         )
 
-    def _render_agent_icons(self) -> Panel:
-        """Top-right: ASCII art icons for connected agents."""
-        tbl = Table(box=None, border_style="green")
-        tbl.add_column("Icon", style="green", width=16)
-        tbl.add_column("Device", style="white")
-        tbl.add_column("Status", style="dim", max_width=12)
-        tbl.add_column("Task", style="dim", max_width=30)
-
-        blink = self._blink_states[self._blink_cycle % len(self._blink_states)]
-
-        if not self.agents:
-            tbl.add_row("", "[dim]No agents connected[reset]", "—", "—")
-        else:
-            for dev_id, info in list(self.agents.items())[:8]:
-                dev_type = "cyd"  # default icon
-                for t in DEVICE_ICONS:
-                    if t in dev_id.lower() or t in info.get("task", "").lower():
-                        dev_type = t
-                        break
-                icon = DEVICE_ICONS.get(dev_type, DEVICE_ICONS["cyd"])
-                icon = icon.replace("  O  ", blink)
-
-                status_style = "bold green" if info["status"] == "active" else "yellow"
-                if info["status"] == "offline":
-                    status_style = "red"
-
-                task = info.get("task", "idle")
-                if len(task) > 28:
-                    task = task[:25] + "..."
-
-                tbl.add_row(icon, dev_id, Text(str(info["status"]), style=status_style), task)
-
-        return Panel(
-            tbl,
-            title="[bold green]● CONNECTED AGENTS[/]",
-            subtitle="[dim]Blink = verification pulse[/]",
-            border_style="green",
-            padding=(0, 1),
-        )
-
-    def _render_comm_log(self) -> Panel:
-        """Middle-right: Communication messages from gateway."""
-        tbl = Table(box=None, border_style="blue")
-        tbl.add_column("Time", style="dim", width=12)
-        tbl.add_column("Message", style="white")
-
-        comm_lines = self._read_comm_log()
-        if not comm_lines:
-            tbl.add_row("", "[dim]Waiting for messages...[/]")
-        else:
-            for line in comm_lines:
-                # Extract timestamp
-                parts = line.split(" ", 2)
-                ts = parts[0] if parts else "—"
-                msg = parts[2] if len(parts) > 2 else line
-                tbl.add_row(ts, msg[:80])
-
-        return Panel(
-            tbl,
-            title="[bold blue]◆ COMMUNICATION LOG[/]",
-            border_style="blue",
-            padding=(0, 1),
-        )
-
-    def _render_log_tail(self) -> Panel:
-        """Bottom: Live log tail."""
-        tbl = Table(box=None, border_style="yellow")
-        tbl.add_column("Line", style="dim", width=5)
-        tbl.add_column("Content", style="white")
-
-        tail_lines = self._read_gateway_log()
-        if not tail_lines:
-            tbl.add_row("", "[dim]No log data[/]")
-        else:
-            for i, line in enumerate(tail_lines[-15:], 1):
-                tbl.add_row(f"{i:3d}", line[:100])
-
-        return Panel(
-            tbl,
-            title=f"[bold yellow]▸ LIVE TAIL — {os.path.basename(self.log_path)}[/]",
-            border_style="yellow",
-            padding=(0, 1),
-        )
-
     # ------------------------------------------------------------------
     # Main loop
     # ------------------------------------------------------------------
 
     def render(self) -> Panel:
-        """Render the full 3-panel dashboard."""
+        """Render the full dashboard as a Rich Panel with plain text content."""
         self._blink_cycle += 1
 
         # Query real gateway data
@@ -340,29 +256,21 @@ class RADARConsole:
             with self._agent_lock:
                 self.agents = new_agents
 
-        # Build right panel column
-        right = self._render_agent_icons()
-        right = Panel(right.content if hasattr(right, 'content') else right,
-                       title=right.title, subtitle=right.subtitle,
-                       border_style=right.border_style)
+        # Build the text content
+        header = self._render_header().plain
+        agents_text = self._agent_icons_text()
+        comm_lines = self._read_comm_log()[-8:]
+        log_tail = self._read_gateway_log()[-8:]
 
-        # Stack: agent icons | comm log | log tail
-        from rich.layout import Layout
-        from rich.rule import Rule
-
-        comm = self._render_comm_log()
-        tail = self._render_log_tail()
-
-        # Combine right side
-        right_section = f"[bold green]● CONNECTED AGENTS[/]\n{self._agent_icons_text()}\n\n"
-        right_section += f"[bold blue]◆ COMM[/]\n"
-        right_section += "\n".join(self._read_comm_log()[-8:]) + "\n"
-        right_section += f"\n[bold yellow]▸ TAIL[/]\n"
-        right_section += "\n".join(self._read_gateway_log()[-8:])
+        body = f"[bold green]● CONNECTED AGENTS[/]\n{agents_text}\n"
+        body += f"\n[bold blue]◆ COMM[/]\n"
+        body += "\n".join(comm_lines) if comm_lines else "\n[dim]No messages yet[/]\n"
+        body += f"\n[bold yellow]▸ TAIL — {os.path.basename(self.log_path)}[/]\n"
+        body += "\n".join(log_tail) if log_tail else "\n[dim]No log data[/]\n"
 
         return Panel(
-            right_section,
-            title=self._render_header().plain,
+            body,
+            title=header,
             border_style="cyan",
             padding=(0, 1),
         )

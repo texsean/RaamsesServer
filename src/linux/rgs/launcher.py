@@ -15,11 +15,11 @@ import argparse
 import sys
 import os
 
-# Ensure the rgs package directory is on sys.path
-# launcher.py is at src/linux/rgs/launcher.py
-_rgs_dir = os.path.dirname(os.path.abspath(__file__))
-if _rgs_dir not in sys.path:
-    sys.path.insert(0, _rgs_dir)
+# Ensure the rgs package is importable.
+# launcher.py lives at src/linux/rgs/launcher.py; sys.path needs src/linux/
+_rgs_parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # src/linux/
+if _rgs_parent not in sys.path:
+    sys.path.insert(0, _rgs_parent)
 
 from rgs.server.mock_server import MockRaamsesServer
 from rgs.client.device_emulator import DeviceEmulator

@@ -18,11 +18,12 @@ import random
 import os
 from datetime import datetime, timezone, timedelta
 
-# Ensure the python directory is on sys.path
-# device_emulator.py is at src/python/raamses/client/device_emulator.py
-_python_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if _python_dir not in sys.path:
-    sys.path.insert(0, _python_dir)
+# Ensure the rgs package is importable.
+# device_emulator.py lives at src/linux/rgs/client/device_emulator.py;
+# sys.path needs src/linux/ so that `from rgs.server.mock_server` resolves.
+_rgs_parent = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # src/linux/
+if _rgs_parent not in sys.path:
+    sys.path.insert(0, _rgs_parent)
 
 
 # Device profiles (from device_emulator.py)

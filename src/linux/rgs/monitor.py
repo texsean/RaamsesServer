@@ -14,13 +14,15 @@ import signal
 import argparse
 import re
 
-# Accept --log argument for the log file to monitor
-_parser = argparse.ArgumentParser()
+# Accept --log and --port arguments for flexibility
+_parser = argparse.ArgumentParser(description="Raamses Live Server Monitor")
 _parser.add_argument("--log", default="/tmp/raamses_server_live.log", help="Server log file to monitor")
+_parser.add_argument("--server-port", type=int, default=8765, help="Gateway server port (display only)")
 _args = _parser.parse_args()
 
 RAAMSES_LOG = _args.log
 RAAMSES_STATE = "/tmp/raamses_state.json"
+SERVER_PORT = _args.server_port
 
 class LiveMonitor:
     def __init__(self):
@@ -146,7 +148,7 @@ class LiveMonitor:
         print(f"\r{border}", end="", flush=True)
 
         # Row 2: Stats
-        print(f"\r│ Devices: {device_count:^10d} │ Alerts: {alert_count:^6d} │ Commands: {cmd_count:^4d} │ Server: 127.0.0.1:9999", end="", flush=True)
+        print(f"\r│ Devices: {device_count:^10d} │ Alerts: {alert_count:^6d} │ Commands: {cmd_count:^4d} │ Server: 127.0.0.1:{SERVER_PORT}", end="", flush=True)
         print(f"\r{border}", end="", flush=True)
 
         # Row 3+: Device Table
