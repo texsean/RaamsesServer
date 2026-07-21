@@ -12,10 +12,6 @@ namespace Raamses.RGS.Windows
         private DispatcherTimer _logTimer;
         private string _currentLogPath = "gateway.log";
 
-        // Multi-agent tracking
-        private int _agentCount = 0;
-        private ObservableCollection<AgentType> _detectedAgents = new ObservableCollection<AgentType>();
-
         public MainWindow()
         {
             InitializeComponent();
@@ -25,9 +21,16 @@ namespace Raamses.RGS.Windows
             VerificationModeCombo.SelectedIndex = 0; // Blink
 
             WriteLog("RGSStartup", "Windows RGS initialized - Verification=Blink");
+            WriteLog("AgentDetection", "Scanning for local agents...");
 
-            DetectAgents();
-            PopulateDisplayIcons();
+            // Run multi-agent detection on startup
+            DetectConnectedAgents();
+
+            AddDisplayIcon("CYD-001");
+            AddDisplayIcon("Cardputer-01");
+            AddDisplayIcon("Core2-Dev");
+
+            SimulateRawCommunication();
         }
 
         private void LoadLogFiles()
@@ -57,7 +60,7 @@ namespace Raamses.RGS.Windows
                 LogTailBox.Text = string.Join(Environment.NewLine, lastLines);
                 LogTailBox.ScrollToEnd();
             }
-            catch { }
+            catch { /* ignore */ }
         }
 
         public void WriteLog(string method, string detail)
@@ -69,68 +72,57 @@ namespace Raamses.RGS.Windows
             {
                 File.AppendAllText(_currentLogPath, logLine + Environment.NewLine);
             }
-            catch { }
+            catch { /* ignore */ }
         }
 
-        // === RAW COMMUNICATION LOGGING (for middle panel) ===
-        public void LogRawCommunication(string direction, string message)
+        private void ApplyConfig_Click(object sender, RoutedEventArgs e)
         {
-            string timestamp = DateTime.Now.ToString("MMddyy-HHmmss.fff");
-            string logLine = $"{timestamp}\tRAW_{direction}\t{message}";
-
-            try
-            {
-                File.AppendAllText(_currentLogPath, logLine + Environment.NewLine);
-            }
-            catch { }
-
-            // Also show in the Raw Comms box
-            RawCommsBox.AppendText($"[{timestamp}] {direction}: {message}\n");
-            RawCommsBox.ScrollToEnd();
-        }
-
-        // === MULTI-AGENT DETECTION ===
-        private void DetectAgents()
-        {
-            _detectedAgents.Clear();
-
-            // TODO: Replace with real process/config scanning
-            _detectedAgents.Add(AgentType.Hermes);
-            _detectedAgents.Add(AgentType.Claude);
-
-            _agentCount = _detectedAgents.Count;
-
-            WriteLog("AgentDetection", $"<agentcount>{_agentCount}</agentcount>");
-            WriteLog("AgentDetection", $"<agentType>{string.Join(",", _detectedAgents)}</agentType>");
-        }
-
-        // === DISPLAY ICONS ===
-        private void PopulateDisplayIcons()
-        {
-            DisplayIconsPanel.Children.Clear();
-
-            AddDisplayIcon("CYD-01");
-            AddDisplayIcon("Cardputer-Alpha");
-            AddDisplayIcon("Core2-Beta");
-            AddDisplayIcon("Android-Client");
+            string mode = ((ComboBoxItem)VerificationModeCombo.SelectedItem).Content.ToString();
+            MessageBox.Show($"Applied verification mode: {mode}");
         }
 
         public void AddDisplayIcon(string displayName)
         {
-            var icon = new TextBlock
-            {
-                Text = "🖥️ " + displayName,
+            var icon = new TextBlock 
+            { 
+                Text = "🖥️ " + displayName, 
                 Margin = new Thickness(8, 0, 8, 0),
                 FontSize = 14
             };
             DisplayIconsPanel.Children.Add(icon);
         }
 
-        private void ApplyConfig_Click(object sender, RoutedEventArgs e)
+        // === MULTI-AGENT DETECTION ===
+        private void DetectConnectedAgents()
         {
-            string mode = ((ComboBoxItem)VerificationModeCombo.SelectedItem).Content.ToString();
-            WriteLog("ConfigApply", $"Verification mode changed to {mode}");
-            MessageBox.Show($"Applied verification mode: {mode}");
+            // Simulated agent discovery (will be replaced with real detection later)
+            var detectedAgents = new List<AgentType> 
+            { 
+                AgentType.Hermes, 
+                AgentType.Claude 
+            };
+
+            int agentCount = detectedAgents.Count;
+
+            WriteLog("AgentDetection", $"Found {agentCount} agents");
+
+            // Show in raw comms box
+            RawCommsBox.AppendText($"\n[RGS] AgentCount: {agentCount}\n");
+            foreach (var agent in detectedAgents)
+            {
+                RawCommsBox.AppendText($"[RGS]   <agentType>{agent}</agentType>\n");
+            }
+
+            WriteLog("AgentDetection", $"<agentcount>{agentCount}</agentcount>");
+        }
+
+        private void SimulateRawCommunication()
+        {
+            RawCommsBox.AppendText("[Android] → [RGS]     Register: AgentType=Claude, Device=Pixel7\n");
+            RawCommsBox.AppendText("[RGS]     → [Android] RegisterAck: SessionId=RAAM-7842\n");
+            RawCommsBox.AppendText("[Linux]   → [RGS]     Heartbeat: AgentCount=3 (Hermes, Claude, Unknown)\n");
+            RawCommsBox.AppendText("[RGS]     → [CYD-001] AgentUpdate: Hermes token burn rate 42/min\n");
+            RawCommsBox.AppendText("[Cardputer-01] → [RGS] Status: Connected\n");
         }
     }
 
