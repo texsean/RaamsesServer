@@ -40,6 +40,7 @@ GATEWAY_COMMANDS = {
     "register", "registerack", "heartbeat", "status", "quit", "exit",
     "agents", "list", "help", "about", "connect", "disconnect",
     "mock", "clear", "cls", "reset", "ping",
+    "/verify", "/report", "/siteid",
 }
 
 # Agent-update messages (not commands, but device-initiated)

@@ -28,6 +28,11 @@ __all__ = [
     # Console
     "RADARConsole",
     "ServerAwareConsole",
+    # Trust but Verify + Report Issue
+    "TrustVerifier",
+    "report_issue",
+    "SiteConfig",
+    "get_site_id",
 ]
 
 
@@ -53,6 +58,10 @@ def __getattr__(name: str):
         "DeviceEmulator": ("rgs.client.device_emulator", "DeviceEmulator"),
         "RADARConsole": ("rgs.console.radar", "RADARConsole"),
         "ServerAwareConsole": ("rgs.console.server_console", "ServerAwareConsole"),
+        "TrustVerifier": ("rgs.verifier", "TrustVerifier"),
+        "report_issue": ("rgs.report_issue", "report_issue"),
+        "SiteConfig": ("rgs.site_config", "SiteConfig"),
+        "get_site_id": ("rgs.site_config", "get_site_id"),
     }
     if name in _lazy_map:
         module_path, attr_name = _lazy_map[name]

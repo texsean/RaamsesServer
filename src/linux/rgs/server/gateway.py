@@ -1,8 +1,10 @@
-"""Raamses Gateway Server — TCP message router.
+"""Raamses Gateway Server — TCP + HTTP message router.
 
 Accepts TCP connections from registered devices/agents, classifies incoming
 messages, and routes them to the appropriate handler:
 
+  - TCP text messages: REGISTER:id|type|schema, heartbeat, task: ..., progress: ...
+  - HTTP JSON messages: POST /register, /heartbeat, /update with JSON payloads
   - Gateway-local commands execute immediately on this server
   - Agent-targeted commands are dispatched to the correct agent connection
   - Agent updates (heartbeats, task status) are recorded in the session registry
@@ -12,15 +14,21 @@ Commands are dropped (not queued) when an agent has moved on.
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 import socket
 import threading
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from rgs.server.session_registry import SessionRegistry
 from rgs.server.message_router import MessageRouter
+from rgs.verifier import TrustVerifier
+from rgs.report_issue import report_issue
+from rgs.site_config import get_site_id
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +60,9 @@ class GatewayServer:
         self._connections: dict[str, socket.socket] = {}  # device_id -> socket
         self._stale_check_interval = 30  # seconds between stale-agent checks
         self._cleanup_thread: Optional[threading.Thread] = None
+
+        # Trust but Verify engine
+        self._verifier = TrustVerifier(project_root=Path(__file__).resolve().parent.parent.parent.parent.parent)
 
     # ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -165,6 +176,18 @@ class GatewayServer:
                 )
             return "\n".join(lines)
 
+        # Trust but Verify: /verify <agent_id> [question]
+        if cmd.startswith("/verify"):
+            return self._handle_verify_command(command)
+
+        # User-Reported Issues: /report <agent_id> [reported_status] | [actual_status]
+        if cmd.startswith("/report"):
+            return self._handle_report_command(command)
+
+        # Site info: /siteid
+        if cmd.startswith("/siteid") or cmd.startswith("site"):
+            return f"Site ID: {get_site_id()}"
+
         if cmd.startswith("register"):
             return "Register requires device details — handled by session registry"
 
@@ -201,15 +224,504 @@ class GatewayServer:
             session_obj.status = "offline"
             return {"success": False, "error": str(e)}
 
+    # ── Trust but Verify ──────────────────────────────────────────────────
+
+    def _handle_verify_command(self, raw_command: str) -> str:
+        """Handle /verify <agent_id> [question] via TCP text.
+
+        Examples:
+            /verify agent-001 last files
+            /verify agent-001 repo activity
+            /verify agent-001 project updates
+        """
+        parts = raw_command.strip().split(None, 2)  # /verify <agent_id> <question>
+        if len(parts) < 2:
+            return (
+                "Usage: /verify <agent_id> [question]\n"
+                "Questions: 'last files', 'project updates', 'repo activity'\n"
+                "Default (no question): full verification summary"
+            )
+
+        agent_id = parts[1]
+        question = parts[2] if len(parts) > 2 else "last files"
+
+        result = self._verifier.answer_question(agent_id, question)
+        logger.info("VERIFY %s: q='%s' answer='%s'", agent_id, question, result.answer[:80])
+
+        # Return as readable text
+        lines = [
+            f"Verification Result for agent {agent_id}",
+            f"Question: {question}",
+            f"Answer: {result.answer}",
+            f"Timestamp: {result.timestamp}",
+        ]
+        return "\n".join(lines)
+
+    # ── User-Reported Issues ────────────────────────────────────────────────
+
+    def _handle_report_command(self, raw_command: str) -> str:
+        """Handle /report <agent_id> [reported|actual] via TCP text.
+
+        Example:
+            /report agent-001 agent says idle | actually modifying files
+        """
+        parts = raw_command.strip().split(None, 2)
+        if len(parts) < 2:
+            return (
+                "Usage: /report <agent_id> [reported_status | actual_status]\n"
+                "This will collect logs, generate a zip, and open email + folder."
+            )
+
+        agent_id = parts[1]
+        status_parts = parts[2].split("|") if len(parts) > 2 else ["", ""]
+        reported = status_parts[0].strip() if len(status_parts) > 0 else ""
+        actual = status_parts[1].strip() if len(status_parts) > 1 else ""
+
+        # Don't open GUI apps from TCP text (may be headless / remote)
+        report = report_issue(
+            agent_id=agent_id,
+            reported_status=reported,
+            actual_status=actual,
+            log_dir=Path.cwd(),
+            open_apps=False,
+        )
+
+        logger.info("REPORT %s: zip=%s", agent_id, report.zip_path)
+
+        lines = [
+            f"Issue Report Generated",
+            f"  Site ID:          {report.site_id}",
+            f"  Agent ID:         {report.agent_id}",
+            f"  Timestamp:        {report.timestamp}",
+            f"  Log Bundle:       {report.zip_path or '(no logs found)'}",
+            f"  Email (mailto):   {(report.mailto_url or '')[:80]}...",
+            f"  Reported Status:  {report.reported_status}",
+            f"  Actual Status:    {report.actual_status}",
+        ]
+        return "\n".join(lines)
+
+    # ── HTTP Detection ─────────────────────────────────────────────────────
+
+    _HTTP_RE = re.compile(rb"^(GET|POST|PUT|DELETE|PATCH) ")
+
+    def _is_http_request(self, data: bytes) -> bool:
+        """Check if data looks like an HTTP request (GET/POST/... line)."""
+        return bool(self._HTTP_RE.match(data))
+
+    def _parse_http_request(self, raw: bytes) -> dict:
+        """Parse an HTTP request into method, path, headers, body."""
+        text = raw.decode("utf-8", errors="replace")
+        parts = text.split("\r\n\r\n", 1)
+        header_section = parts[0]
+        body = parts[1] if len(parts) > 1 else ""
+
+        lines = header_section.split("\r\n")
+        request_line = lines[0] if lines else ""
+        tokens = request_line.split()
+        method = tokens[0] if len(tokens) >= 1 else "GET"
+        path = tokens[1] if len(tokens) >= 2 else "/"
+
+        headers = {}
+        for line in lines[1:]:
+            if ":" in line:
+                key, val = line.split(":", 1)
+                headers[key.strip().lower()] = val.strip()
+
+        content_length = int(headers.get("content-length", 0))
+        if body and len(body) < content_length:
+            # We may have split mid-body; keep original raw for re-read
+            pass
+
+        return {
+            "method": method,
+            "path": path,
+            "headers": headers,
+            "body": body.strip(),
+        }
+
+    def _send_http_response(
+        self,
+        conn: socket.socket,
+        status: int,
+        status_text: str,
+        body: str,
+        content_type: str = "text/plain",
+    ) -> None:
+        """Send an HTTP response back to the client."""
+        resp = (
+            f"HTTP/1.1 {status} {status_text}\r\n"
+            f"Content-Type: {content_type}\r\n"
+            f"Content-Length: {len(body)}\r\n"
+            f"Connection: close\r\n"
+            f"\r\n"
+            f"{body}"
+        )
+        try:
+            conn.sendall(resp.encode("utf-8"))
+        except (OSError, BrokenPipeError):
+            pass
+
+    # ── HTTP Handlers ──────────────────────────────────────────────────────
+
+    def _handle_http_request(self, conn: socket.socket, addr: tuple, req: dict) -> None:
+        """Route an HTTP request to the appropriate handler.
+
+        Supported endpoints:
+            POST /register  -> register a new device (JSON: device_id, device_type, schema_version)
+            POST /heartbeat -> heartbeat for an existing device (JSON: device_id)
+            POST /update    -> task/progress update (JSON: device_id, task, progress)
+            GET  /status    -> gateway status as JSON
+            GET  /agents    -> list agents as JSON
+            GET  /verify    -> trust-but-verify query (query params: agent_id, question)
+            POST /verify    -> trust-but-verify with JSON body
+            POST /report    -> generate issue report with log zip + email
+            GET  /siteid    -> return the site ID for this installation
+        """
+        method = req["method"]
+        path = req["path"].split("?")[0]  # strip query string
+        body = req["body"]
+
+        logger.info(
+            "HTTP %s %s from %s:%d (body=%s)",
+            method, path, addr[0], addr[1], body[:200],
+        )
+
+        if method == "POST" and path == "/register":
+            self._http_register(conn, addr, body)
+        elif method == "POST" and path == "/heartbeat":
+            self._http_heartbeat(conn, addr, body)
+        elif method == "POST" and path == "/update":
+            self._http_update(conn, addr, body)
+        elif method == "POST" and path == "/status":
+            self._http_status(conn, addr, body)
+        elif method == "GET" and path == "/status":
+            self._http_status(conn, addr, "")
+        elif method == "GET" and path == "/agents":
+            self._http_agents(conn, addr, "")
+        elif method == "GET" and path == "/verify":
+            self._http_verify(conn, addr, req)
+        elif method == "POST" and path == "/verify":
+            self._http_verify(conn, addr, req)
+        elif method == "POST" and path == "/report":
+            self._http_report(conn, addr, body)
+        elif method == "GET" and path == "/siteid":
+            self._http_siteid(conn, addr)
+        elif method == "GET" and path == "/":
+            self._send_http_response(
+                conn, 200, "OK",
+                'Raamses Gateway — send POST /register, POST /heartbeat, POST /update, GET /verify, POST /report',
+            )
+        else:
+            self._send_http_response(
+                conn, 404, "Not Found",
+                '{"error": "unknown endpoint"}',
+                content_type="application/json",
+            )
+
+    def _http_register(self, conn: socket.socket, addr: tuple, body: str) -> None:
+        """Handle POST /register with JSON payload."""
+        try:
+            data = json.loads(body) if body else {}
+        except (json.JSONDecodeError, ValueError) as e:
+            self._send_http_response(
+                conn, 400, "Bad Request",
+                json.dumps({"error": f"invalid JSON: {e}"}),
+                content_type="application/json",
+            )
+            return
+
+        dev_id = data.get("device_id", "")
+        dev_type = data.get("device_type", "cyd")
+        schema_ver = data.get("schema_version", "1.0")
+        firmware = data.get("firmware_version") or data.get("firmware")
+
+        if not dev_id:
+            # Generate one from MAC or IP if missing
+            dev_id = f"http-{addr[0].replace('.', '-')}-{datetime.now(timezone.utc).strftime('%H%M%S')}"
+
+        try:
+            session = self._registry.register(dev_id, dev_type, schema_ver, firmware)
+            # Attach conn as a file wrapper for sendall
+            session.connection = conn
+
+            with self._lock:
+                self._connections[dev_id] = conn
+
+            resp = {
+                "status": "registered",
+                "device_id": dev_id,
+                "accepted": True,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "schema_version": schema_ver,
+                "gateway": "rgs-gateway",
+            }
+            self._send_http_response(
+                conn, 200, "OK",
+                json.dumps(resp),
+                content_type="application/json",
+            )
+            logger.info("HTTP Registration: %s (type=%s, fw=%s, addr=%s:%d)",
+                        dev_id, dev_type, firmware, addr[0], addr[1])
+
+        except Exception as e:
+            logger.error("HTTP Registration failed for %s: %s", dev_id, e)
+            self._send_http_response(
+                conn, 500, "Internal Server Error",
+                json.dumps({"error": str(e)}),
+                content_type="application/json",
+            )
+
+    def _http_heartbeat(self, conn: socket.socket, addr: tuple, body: str) -> None:
+        """Handle POST /heartbeat."""
+        try:
+            data = json.loads(body) if body else {}
+        except (json.JSONDecodeError, ValueError):
+            data = {}
+
+        dev_id = data.get("device_id", "")
+        if not dev_id:
+            self._send_http_response(
+                conn, 400, "Bad Request",
+                json.dumps({"error": "device_id required"}),
+                content_type="application/json",
+            )
+            return
+
+        if self._registry.heartbeat(dev_id):
+            resp = {
+                "status": "ok",
+                "device_id": dev_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            self._send_http_response(
+                conn, 200, "OK",
+                json.dumps(resp),
+                content_type="application/json",
+            )
+        else:
+            self._send_http_response(
+                conn, 404, "Not Found",
+                json.dumps({"error": f"agent {dev_id} not registered"}),
+                content_type="application/json",
+            )
+
+    def _http_update(self, conn: socket.socket, addr: tuple, body: str) -> None:
+        """Handle POST /update with task/progress data."""
+        try:
+            data = json.loads(body) if body else {}
+        except (json.JSONDecodeError, ValueError) as e:
+            self._send_http_response(
+                conn, 400, "Bad Request",
+                json.dumps({"error": f"invalid JSON: {e}"}),
+                content_type="application/json",
+            )
+            return
+
+        dev_id = data.get("device_id", "")
+        if not dev_id:
+            self._send_http_response(
+                conn, 400, "Bad Request",
+                json.dumps({"error": "device_id required"}),
+                content_type="application/json",
+            )
+            return
+
+        # Task update
+        task = data.get("task", "")
+        if task:
+            self._registry.mark_task(dev_id, task)
+            logger.info("HTTP TASK %s: %s", dev_id, task)
+
+        # Progress update
+        progress = data.get("progress", data.get("pct", ""))
+        if progress is not None and progress != "":
+            progress_text = str(progress)
+            if task:
+                progress_text = f"{progress_text} {task}"
+            self._registry.mark_task(dev_id, progress_text)
+            logger.info("HTTP TASK %s: %s", dev_id, progress_text)
+
+        # Alert
+        alert = data.get("alert", "")
+        if alert:
+            logger.warning("ALERT from %s: %s", dev_id, alert)
+
+        # Status fields
+        status_fields = {}
+        if "screen_width" in data:
+            status_fields["screen_width"] = data["screen_width"]
+        if "screen_height" in data:
+            status_fields["screen_height"] = data["screen_height"]
+        if "battery" in data:
+            status_fields["battery"] = data["battery"]
+        if "uptime" in data:
+            status_fields["uptime"] = data["uptime"]
+
+        resp = {
+            "status": "accepted",
+            "device_id": dev_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        if status_fields:
+            resp["fields"] = status_fields
+        self._send_http_response(
+            conn, 200, "OK",
+            json.dumps(resp),
+            content_type="application/json",
+        )
+
+    def _http_status(self, conn: socket.socket, addr: tuple, body: str) -> None:
+        """Handle GET /status — return gateway status as JSON."""
+        active = len(self._registry.list_active())
+        total = self._registry.count()
+        resp = {
+            "status": "running",
+            "agents_active": active,
+            "agents_total": total,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self._send_http_response(
+            conn, 200, "OK",
+            json.dumps(resp),
+            content_type="application/json",
+        )
+
+    def _http_agents(self, conn: socket.socket, addr: tuple, body: str) -> None:
+        """Handle GET /agents — return agent list as JSON."""
+        agents = []
+        for s in self._registry.list_active():
+            agents.append({
+                "device_id": s.device_id,
+                "device_type": s.device_type,
+                "schema_version": s.schema_version,
+                "status": s.status,
+                "current_task": s.current_task,
+                "last_heartbeat": s.last_heartbeat.isoformat() if s.last_heartbeat else None,
+            })
+        resp = {
+            "count": len(agents),
+            "agents": agents,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self._send_http_response(
+            conn, 200, "OK",
+            json.dumps(resp, indent=2),
+            content_type="application/json",
+        )
+
+    def _http_verify(self, conn: socket.socket, addr: tuple, req: dict) -> None:
+        """Handle GET/POST /verify — trust-but-verify query.
+
+        GET  /verify?agent_id=...&question=...
+        POST /verify  {\"agent_id\": \"...\", \"question\": \"...\", \"claims\": {...}}
+        """
+        agent_id = ""
+        question = "last files"
+        claims = None
+
+        if req["method"] == "GET":
+            # Parse query string
+            from urllib.parse import parse_qs
+            query = req["path"].split("?", 1)[1] if "?" in req["path"] else ""
+            params = parse_qs(query)
+            agent_id = params.get("agent_id", [""])[0]
+            question = params.get("question", ["last files"])[0]
+        else:
+            # POST with JSON body
+            try:
+                data = json.loads(req["body"]) if req["body"] else {}
+            except (json.JSONDecodeError, ValueError):
+                data = {}
+            agent_id = data.get("agent_id", "")
+            question = data.get("question", "last files")
+            claims = data.get("claims")
+
+        if not agent_id:
+            self._send_http_response(
+                conn, 400, "Bad Request",
+                json.dumps({"error": "agent_id required"}),
+                content_type="application/json",
+            )
+            return
+
+        if claims:
+            result = self._verifier.verify_agent_claims(agent_id, claims)
+        else:
+            result = self._verifier.answer_question(agent_id, question)
+
+        logger.info("HTTP VERIFY %s: q='%s'", agent_id, question)
+        self._send_http_response(
+            conn, 200, "OK",
+            json.dumps(result.to_dict(), indent=2),
+            content_type="application/json",
+        )
+
+    def _http_report(self, conn: socket.socket, addr: tuple, body: str) -> None:
+        """Handle POST /report — generate issue report with log zip + email.
+
+        JSON body: {"agent_id": "...", "reported_status": "...", "actual_status": "..."}
+        """
+        try:
+            data = json.loads(body) if body else {}
+        except (json.JSONDecodeError, ValueError) as e:
+            self._send_http_response(
+                conn, 400, "Bad Request",
+                json.dumps({"error": f"invalid JSON: {e}"}),
+                content_type="application/json",
+            )
+            return
+
+        agent_id = data.get("agent_id", "")
+        if not agent_id:
+            self._send_http_response(
+                conn, 400, "Bad Request",
+                json.dumps({"error": "agent_id required"}),
+                content_type="application/json",
+            )
+            return
+
+        reported = data.get("reported_status", "")
+        actual = data.get("actual_status", "")
+
+        # Don't open GUI apps from HTTP (may be headless / remote)
+        report = report_issue(
+            agent_id=agent_id,
+            reported_status=reported,
+            actual_status=actual,
+            log_dir=Path.cwd(),
+            open_apps=False,
+        )
+
+        logger.info("HTTP REPORT %s: zip=%s", agent_id, report.zip_path)
+        self._send_http_response(
+            conn, 200, "OK",
+            json.dumps(report.to_dict(), indent=2),
+            content_type="application/json",
+        )
+
+    def _http_siteid(self, conn: socket.socket, addr: tuple) -> None:
+        """Handle GET /siteid — return the site ID for this installation."""
+        resp = {
+            "site_id": get_site_id(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self._send_http_response(
+            conn, 200, "OK",
+            json.dumps(resp, indent=2),
+            content_type="application/json",
+        )
+
     # ── Client Handler ─────────────────────────────────────────────────────
 
     def _handle_client(self, conn: socket.socket, addr: tuple) -> None:
         """Handle a single connected client's message stream.
 
-        Reads lines until the client disconnects or sends a register message.
+        Reads data until the client disconnects. Auto-detects HTTP vs TCP text
+        protocol and routes accordingly.
         """
         device_id = f"client-{addr[0]}:{addr[1]}"
         buf = b""
+        is_http = False
 
         try:
             while self._running:
@@ -218,13 +730,31 @@ class GatewayServer:
                     break  # client disconnected
 
                 buf += data
-                while b"\n" in buf:
-                    line, buf = buf.split(b"\n", 1)
-                    text = line.decode("utf-8", errors="replace").strip()
-                    if not text:
-                        continue
 
-                    self._process_incoming(device_id, text, conn)
+                # Auto-detect HTTP on first read
+                if not is_http:
+                    if self._is_http_request(data):
+                        is_http = True
+                        logger.info("HTTP client detected from %s:%d", addr[0], addr[1])
+                        # Process the HTTP request
+                        req = self._parse_http_request(buf)
+                        self._handle_http_request(conn, addr, req)
+                        # HTTP is single-request-response; close the connection
+                        # so the client reconnects cleanly (HTTPClient behavior)
+                        buf = b""
+                        break  # exit recv loop, connection will be cleaned up
+                    else:
+                        # Not HTTP — process as TCP text (may accumulate multi-line)
+                        pass
+
+                # If not HTTP, process as line-delimited TCP text
+                if not is_http:
+                    while b"\n" in buf:
+                        line, buf = buf.split(b"\n", 1)
+                        text = line.decode("utf-8", errors="replace").strip()
+                        if not text:
+                            continue
+                        self._process_incoming(device_id, text, conn)
 
         except (OSError, ConnectionError) as e:
             logger.info("Client %s:%d disconnected: %s", addr[0], addr[1], e)
@@ -240,106 +770,63 @@ class GatewayServer:
 
     def _process_incoming(self, device_id: str, text: str, conn: socket.socket) -> None:
         """Process a single incoming message from a client."""
+        # Check for gateway commands (no registration needed)
+        cmd_lower = text.strip().lower()
+        if cmd_lower in ("status", "ping", "agents", "list"):
+            response = self._execute_gateway_command(cmd_lower)
+            try:
+                conn.sendall((response + "\n").encode("utf-8"))
+            except (OSError, BrokenPipeError):
+                pass
+            return
 
-        # Check if this is a register message
+        # Trust but Verify / Report Issue / Site ID commands (no registration needed)
+        if text.strip().lower().startswith(("/verify", "/report", "/siteid")):
+            response = self._execute_gateway_command(text.strip())
+            try:
+                conn.sendall((response + "\n").encode("utf-8"))
+            except (OSError, BrokenPipeError):
+                pass
+            return
+
+        # Check if this is a REGISTER message
         if text.startswith("REGISTER:"):
-            self._handle_register(device_id, text, conn)
-            return
+            parts = text[9:].split("|")
+            if len(parts) >= 2:
+                reg_id = parts[0]
+                reg_type = parts[1]
+                schema_ver = parts[2] if len(parts) > 2 else "1.0"
 
-        # Look up the session by connection (not by raw device_id)
-        session = self._registry.get_session_by_connection(conn)
+                session = self._registry.register(reg_id, reg_type, schema_ver)
+                session.connection = conn
 
-        # Gateway-local commands work for ALL clients (status, agents, ping, quit)
-        if text.lower().strip() in ("status", "ping"):
-            self._send_to_client(conn, self._execute_gateway_command(text.lower().strip()))
-            return
-        if text.lower().strip() in ("agents", "list", "list agents"):
-            self._send_to_client(conn, self._execute_gateway_command("agents"))
-            return
+                # Acknowledge registration
+                ack = f"REGISTER_ACK:true|{datetime.now(timezone.utc).isoformat()}|{schema_ver}|rgs-gateway"
+                try:
+                    conn.sendall((ack + "\n").encode("utf-8"))
+                except (OSError, BrokenPipeError):
+                    pass
 
-        if session is None:
-            # Unregistered client — log and respond
-            logger.info("Unregistered client %s sent: %s", device_id[:20], text[:100])
-            self._send_to_client(
-                conn,
-                "INFO: unregistered client. Send 'REGISTER:<details>' first."
-            )
-            return
+                # Store connection
+                with self._lock:
+                    self._connections[reg_id] = conn
 
-        # This is a registered agent — process by its actual device_id
-        actual_id = session.device_id
+                logger.info("Registered agent: %s (type=%s, addr=%s:%d)",
+                            reg_id, reg_type, conn.getpeername()[0], conn.getpeername()[1])
+                return
 
-        # Check for heartbeat from a registered agent
-        if text.lower().startswith("heartbeat") or text == "PING":
-            if self._registry.heartbeat(actual_id):
-                self._send_to_client(conn, "OK: heartbeat received")
-            return
-
-        # Check for agent task update
-        if text.lower().startswith(("task:", "update:", "progress:")):
-            task_text = text.split(":", 1)[1].strip() if ":" in text else text
-            self._registry.mark_task(actual_id, task_text)
-            logger.info("TASK %s: %s", actual_id, task_text)
-            self._send_to_client(conn, f"OK: task updated to '{task_text}'")
-            return
-
-        # Route through the message router
-        if self._router:
-            result = self._router.route(text)
-            response = self._format_response(result, actual_id)
-            self._send_to_client(conn, response)
-
-    def _handle_register(self, device_id: str, text: str, conn: socket.socket) -> None:
-        """Parse and handle a REGISTER message."""
-        # Format: REGISTER:<device_id>|<device_type>|<schema_version>[|<firmware>]
-        parts = text.replace("REGISTER:", "").split("|")
-        if len(parts) < 3:
-            self._send_to_client(conn,
-                "ERROR: REGISTER format: REGISTER:<device_id>|<type>|<schema>[|<firmware>]")
-            return
-
-        dev_id = parts[0].strip()
-        dev_type = parts[1].strip()
-        schema_ver = parts[2].strip()
-        firmware = parts[3].strip() if len(parts) > 3 else None
-
-        session = self._registry.register(dev_id, dev_type, schema_ver, firmware,
-                                          connection=conn)
-
-        with self._lock:
-            self._connections[dev_id] = conn
-
-        ack = (
-            f"REGISTER_ACK:true|{datetime.now(timezone.utc).isoformat()}|"
-            f"{schema_ver}|rgs-gateway"
-        )
-        self._send_to_client(conn, ack)
-        logger.info("Registration accepted: %s (type=%s, schema=%s, fw=%s, addr=%s:%d)",
-                     dev_id, dev_type, schema_ver, firmware or "none",
-                     *conn.getpeername())
-
-    # ── I/O Helpers ────────────────────────────────────────────────────────
-
-    def _send_to_client(self, conn: socket.socket, text: str) -> None:
-        """Send a response to a connected client."""
-        try:
-            conn.sendall(f"{text}\n".encode("utf-8"))
-        except (OSError, BrokenPipeError):
-            pass
-
-    def _format_response(self, result: dict, target: str) -> str:
-        """Format a router result dict into a human-readable string."""
-        status = result.get("status", "unknown")
-        message = result.get("message", "")
-        msg_type = result.get("type", "gateway")
-
-        status_icon = "✓" if status == "delivered" else "✗" if status == "dropped" else "→"
-        return f"[{status_icon.upper()}] {status} — {message}"
+        # Unknown message from unregistered client
+        logger.info("Unregistered client %s sent: %s", device_id[:20], text[:100])
+        if conn is not None:
+            try:
+                conn.sendall(b"INFO: unregistered client. Send 'REGISTER:<details>' first.\n")
+            except (OSError, BrokenPipeError):
+                pass
 
     # ── Stale-Agent Cleanup ────────────────────────────────────────────────
 
     def _stale_cleanup_loop(self) -> None:
-        """Periodically remove agents whose heartbeats have timed out."""
+        """Periodically check for stale agents and remove them."""
         while self._running:
             time.sleep(self._stale_check_interval)
             try:
