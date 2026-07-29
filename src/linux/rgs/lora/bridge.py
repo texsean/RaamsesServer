@@ -1,8 +1,14 @@
-"""Raamses LoRa Bridge — connects Meshtastic radio to the gateway server.
+"""Raamses LoRa Bridge — connects LoRa radio to the gateway server.
+
+Supports two radio backends:
+  - "meshtastic" (default): Meshtastic mesh radio via serial or TCP.
+    Uses the meshtastic Python library, protobuf mesh routing, port 256.
+  - "rangepi": RangePi USB LoRa dongle (RP2040 + LoRa module).
+    Uses raw serial-to-LoRa transparent mode. No mesh routing.
 
 This module provides the LoRaBridge class that:
-1. Connects to a Meshtastic radio (serial or TCP)
-2. Listens on port 256 (PRIVATE_APP) for Raamses binary packets
+1. Connects to a LoRa radio (Meshtastic or RangePi)
+2. Listens for Raamses binary packets
 3. Handles REGISTER and HEARTBEAT from LoRa nodes
 4. Broadcasts ALERT and CLEAR to all LoRa nodes when the gateway detects
    agent state changes
@@ -81,16 +87,25 @@ class LoRaBridge:
         on_register: Optional[Callable] = None,
         on_heartbeat: Optional[Callable] = None,
         on_ack: Optional[Callable] = None,
+        backend: str = "meshtastic",
     ) -> None:
+        """Create a LoRaBridge.
+
+        Args:
+            backend: "meshtastic" (default) or "rangepi".
+                - "meshtastic": uses serial_port / tcp_host for Meshtastic radio
+                - "rangepi": uses serial_port (default /dev/ttyACM0) for RangePi dongle
+        """
         self._registry = registry
         self._serial_port = serial_port
         self._tcp_host = tcp_host
         self._channel_index = channel_index
+        self._backend_name = backend.lower()
         self._on_register = on_register
         self._on_heartbeat = on_heartbeat
         self._on_ack = on_ack
 
-        self._interface = None  # Meshtastic interface object
+        self._interface = None  # Meshtastic interface OR RangePiBackend
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._alert_seq = alert_seq_start
@@ -126,7 +141,8 @@ class LoRaBridge:
         if self._mock_mode:
             print("[LoRaBridge] Mock mode active — LoRa packets will be logged but not sent/received")
         else:
-            print(f"[LoRaBridge] Connected to radio, listening on port {RAAMSES_PORT_NUM}")
+            backend_label = f"{self._backend_name} backend" if self._backend_name != "meshtastic" else f"port {RAAMSES_PORT_NUM}"
+            print(f"[LoRaBridge] Connected to radio ({self._backend_name}), listening on {backend_label}")
 
         return True
 
@@ -139,7 +155,10 @@ class LoRaBridge:
 
         if self._interface is not None:
             try:
-                self._interface.close()
+                if self._backend_name == "rangepi":
+                    self._interface.stop()
+                else:
+                    self._interface.close()
             except Exception:
                 pass
             self._interface = None
@@ -149,7 +168,27 @@ class LoRaBridge:
     # ── Radio Connection ────────────────────────────────────────────────
 
     def _connect_radio(self) -> None:
-        """Connect to the Meshtastic radio via serial or TCP."""
+        """Connect to the LoRa radio via the selected backend."""
+        if self._backend_name == "rangepi":
+            self._connect_rangepi()
+        else:
+            self._connect_meshtastic()
+
+    def _connect_rangepi(self) -> None:
+        """Connect to a RangePi USB LoRa dongle."""
+        from rgs.lora.rangepi_backend import RangePiBackend
+        port = self._serial_port or "/dev/ttyACM0"
+        logger.info("Connecting to RangePi via serial: %s", port)
+        self._interface = RangePiBackend(
+            serial_port=port,
+            baudrate=115200,
+            on_receive=self._on_receive_rangepi,
+            node_id=1,
+        )
+        self._interface.start()
+
+    def _connect_meshtastic(self) -> None:
+        """Connect to a Meshtastic radio via serial or TCP."""
         if self._tcp_host:
             # TCP interface (for remote Meshtastic node)
             from meshtastic.tcp_interface import TCPInterface
@@ -207,6 +246,29 @@ class LoRaBridge:
 
         except Exception as e:
             logger.exception("Error processing LoRa packet: %s", e)
+
+    def _on_receive_rangepi(self, raw_bytes: bytes) -> None:
+        """Callback for received packets from the RangePi backend.
+
+        The RangePi backend delivers complete Raamses binary packets
+        (already framed: cmd + len + payload). We parse and dispatch.
+        """
+        try:
+            parsed = parse_packet(raw_bytes)
+            if parsed is None:
+                logger.warning("Malformed RangePi packet: %s", raw_bytes.hex())
+                return
+
+            # RangePi has no node ID in the mesh sense — use the radio's node_id
+            from_node = self._interface.node_id if self._interface else 1
+
+            logger.info("RangePi RX: %s (%d bytes)",
+                        parsed.cmd_name, len(raw_bytes))
+
+            self._handle_packet(parsed, from_node)
+
+        except Exception as e:
+            logger.exception("Error processing RangePi packet: %s", e)
 
     def _handle_packet(self, parsed, from_node: int) -> None:
         """Handle a parsed LoRa packet from a remote node."""
@@ -332,8 +394,7 @@ class LoRaBridge:
         Returns True if sent, False if in mock mode or error.
         """
         if self._mock_mode:
-            logger.info("[MOCK] Would send on LoRa port %d: %s",
-                       RAAMSES_PORT_NUM, data.hex())
+            logger.info("[MOCK] Would send on LoRa: %s", data.hex())
             return False
 
         if self._interface is None:
@@ -341,14 +402,19 @@ class LoRaBridge:
             return False
 
         try:
-            self._interface.sendData(
-                data=data,
-                destinationId="^all",
-                portNum=RAAMSES_PORT_NUM,
-                channelIndex=self._channel_index,
-                wantAck=False,
-            )
-            return True
+            if self._backend_name == "rangepi":
+                # RangePi backend — raw serial to LoRa
+                return self._interface.send_data(data)
+            else:
+                # Meshtastic backend — sendData with port/channel
+                self._interface.sendData(
+                    data=data,
+                    destinationId="^all",
+                    portNum=RAAMSES_PORT_NUM,
+                    channelIndex=self._channel_index,
+                    wantAck=False,
+                )
+                return True
         except Exception as e:
             logger.error("LoRa send failed: %s", e)
             return False
@@ -375,15 +441,25 @@ class LoRaBridge:
                 last_health_check = now
                 if not self._mock_mode and self._interface is not None:
                     try:
-                        # Check if interface is still connected
-                        if hasattr(self._interface, 'isConnected'):
-                            if not self._interface.isConnected():
-                                logger.warning("LoRa radio disconnected — attempting reconnect")
+                        if self._backend_name == "rangepi":
+                            # RangePi backend — check is_connected
+                            if not self._interface.is_connected:
+                                logger.warning("RangePi serial disconnected — attempting reconnect")
                                 try:
                                     self._connect_radio()
                                 except Exception as e:
                                     logger.error("Reconnect failed: %s", e)
                                     self._mock_mode = True
+                        else:
+                            # Meshtastic backend — check isConnected()
+                            if hasattr(self._interface, 'isConnected'):
+                                if not self._interface.isConnected():
+                                    logger.warning("LoRa radio disconnected — attempting reconnect")
+                                    try:
+                                        self._connect_radio()
+                                    except Exception as e:
+                                        logger.error("Reconnect failed: %s", e)
+                                        self._mock_mode = True
                     except Exception as e:
                         logger.warning("Health check error: %s", e)
 

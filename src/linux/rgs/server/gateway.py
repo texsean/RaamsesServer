@@ -50,6 +50,7 @@ class GatewayServer:
         enable_lora: bool = False,
         lora_serial_port: Optional[str] = None,
         lora_tcp_host: Optional[str] = None,
+        lora_backend: str = "meshtastic",
     ) -> None:
         self._host = host
         self._port = port
@@ -72,6 +73,7 @@ class GatewayServer:
         self._enable_lora = enable_lora
         self._lora_serial_port = lora_serial_port
         self._lora_tcp_host = lora_tcp_host
+        self._lora_backend = lora_backend
 
     # ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -223,7 +225,7 @@ class GatewayServer:
     # ── LoRa Bridge ──────────────────────────────────────────────────────
 
     def _start_lora_bridge(self) -> None:
-        """Start the LoRa bridge to connect Meshtastic radio."""
+        """Start the LoRa bridge to connect a LoRa radio (Meshtastic or RangePi)."""
         try:
             from rgs.lora.bridge import LoRaBridge
             self._lora_bridge = LoRaBridge(
@@ -232,9 +234,11 @@ class GatewayServer:
                 tcp_host=self._lora_tcp_host,
                 on_register=self._on_lora_register,
                 on_heartbeat=self._on_lora_heartbeat,
+                backend=self._lora_backend,
             )
             self._lora_bridge.start()
-            logger.info("LoRa bridge started (mock=%s)", self._lora_bridge.is_mock_mode)
+            logger.info("LoRa bridge started (backend=%s, mock=%s)",
+                       self._lora_backend, self._lora_bridge.is_mock_mode)
         except Exception as e:
             logger.error("Failed to start LoRa bridge: %s", e)
             self._lora_bridge = None
@@ -550,6 +554,10 @@ class GatewayServer:
                 "schema_version": schema_ver,
                 "gateway": "rgs-gateway",
             }
+            # If there's an active alert on this device, include it
+            if session.alert_active:
+                resp["alert"] = "Agent needs help"
+                resp["alert_seq"] = session.alert_seq
             self._send_http_response(
                 conn, 200, "OK",
                 json.dumps(resp),
@@ -583,16 +591,31 @@ class GatewayServer:
             return
 
         if self._registry.heartbeat(dev_id):
+            # Check if this agent has an active alert — include it in the
+            # heartbeat response so WiFi-connected Meshtastic devices see it
+            session = self._registry.get(dev_id)
+            alert_msg = ""
+            alert_seq = None
+            if session and session.alert_active:
+                alert_msg = "Agent needs help"
+                alert_seq = session.alert_seq
+
             resp = {
                 "status": "ok",
                 "device_id": dev_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
+            if alert_msg:
+                resp["alert"] = alert_msg
+                resp["alert_seq"] = alert_seq
             self._send_http_response(
                 conn, 200, "OK",
                 json.dumps(resp),
                 content_type="application/json",
             )
+            if alert_msg:
+                logger.info("HB response to %s includes alert: %s (seq=%d)",
+                            dev_id, alert_msg, alert_seq)
         else:
             self._send_http_response(
                 conn, 404, "Not Found",
@@ -640,11 +663,14 @@ class GatewayServer:
         alert = data.get("alert", "")
         if alert:
             logger.warning("ALERT from %s: %s", dev_id, alert)
-            # Set alert state in registry and broadcast on LoRa
+            # Set alert state in registry
             seq = self._broadcast_alert_on_lora()
-            if seq is not None:
-                self._registry.set_alert(dev_id, seq)
-                logger.info("Alert broadcast on LoRa for %s: seq=%d", dev_id, seq)
+            if seq is None:
+                # No LoRa bridge — generate a local sequence number
+                seq = int(time.time()) & 0xFFFF
+            self._registry.set_alert(dev_id, seq)
+            logger.info("Alert set for %s: seq=%d (lora=%s)",
+                       dev_id, seq, seq is not None and self._lora_bridge is not None)
 
         # Check for alert clear — if "alert_clear" field is present, or
         # if "alert" is empty and the agent previously had an alert

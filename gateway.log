@@ -1,46 +1,20 @@
-20:15:00 [INFO] rgs.server.gateway Raamses Gateway listening on 0.0.0.0:8765
-20:15:15 [INFO] rgs.server.gateway HTTP client detected from 192.168.7.194:49734
-20:15:15 [INFO] rgs.server.gateway HTTP GET / from 192.168.7.194:49734 (body=)
-20:15:21 [INFO] rgs.server.gateway HTTP client detected from 192.168.7.194:49744
-20:15:21 [INFO] rgs.server.gateway HTTP GET /status from 192.168.7.194:49744 (body=)
-20:15:23 [INFO] rgs.server.gateway HTTP client detected from 192.168.7.194:49760
-20:15:23 [INFO] rgs.server.gateway HTTP GET /agents from 192.168.7.194:49760 (body=)
-20:16:03 [INFO] rgs.server.gateway HTTP client detected from 192.168.7.194:51330
-20:16:03 [INFO] rgs.server.gateway HTTP POST /register from 192.168.7.194:51330 (body={
-    "device_id": "android-console-orion",
-    "device_type": "android_console",
-    "device_name": "RAAMSES Android Console",
-    "schema_version": "1.0",
-    "capabilities": {
-      "screen": {"wid)
-20:16:03 [INFO] rgs.server.session_registry Registered: android-console-orion (type=android_console, schema=1.0)
-20:16:03 [INFO] rgs.server.gateway HTTP Registration: android-console-orion (type=android_console, fw=None, addr=192.168.7.194:51330)
-20:16:07 [INFO] rgs.server.gateway HTTP client detected from 192.168.7.194:56884
-20:16:07 [INFO] rgs.server.gateway HTTP POST /heartbeat from 192.168.7.194:56884 (body={
-    "device_id": "android-console-orion",
-    "uptime_seconds": 120,
-    "status": "online"
-  })
-20:16:08 [INFO] rgs.server.gateway HTTP client detected from 192.168.7.194:56900
-20:16:08 [INFO] rgs.server.gateway HTTP GET /agents from 192.168.7.194:56900 (body=)
-20:18:00 [WARNING] rgs.server.session_registry Stale agent removed: android-console-orion (last heartbeat 2026-07-26 01:16:07.072077+00:00)
-20:18:00 [INFO] rgs.server.gateway Cleaned up 1 stale agent(s): android-console-orion
-00:29:19 [INFO] rgs.server.gateway Client 192.168.7.194:49740 disconnected: [Errno 104] Connection reset by peer
-05:03:01 [INFO] rgs.server.session_registry Registered: android-console-1dac9b9d (type=android_console, schema=1.0)
-05:03:01 [INFO] rgs.server.gateway Registered agent: android-console-1dac9b9d (type=android_console, addr=192.168.7.194:35316)
-05:03:09 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:03:17 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:03:25 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:03:33 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:03:41 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:03:49 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:03:57 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:04:05 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:04:08 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: give me a  status
-05:04:13 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:04:21 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:04:29 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:04:37 [INFO] rgs.server.gateway Unregistered client client-192.168.7.194 sent: heartbeat
-05:04:43 [INFO] rgs.server.gateway Client 192.168.7.194:35316 disconnected: [Errno 104] Connection reset by peer
-05:05:00 [WARNING] rgs.server.session_registry Stale agent removed: android-console-1dac9b9d (last heartbeat 2026-07-26 10:03:01.371812+00:00)
-05:05:00 [INFO] rgs.server.gateway Cleaned up 1 stale agent(s): android-console-1dac9b9d
+09:47:39 [INFO] rgs.server.gateway Raamses Gateway listening on 0.0.0.0:8765
+09:47:45 [INFO] rgs.server.gateway HTTP client detected from 127.0.0.1:49668
+09:47:45 [INFO] rgs.server.gateway HTTP GET /status from 127.0.0.1:49668 (body=)
+09:47:46 [INFO] rgs.server.gateway HTTP client detected from 127.0.0.1:49674
+09:47:46 [INFO] rgs.server.gateway HTTP POST /register from 127.0.0.1:49674 (body={"device_id": "cyd-001", "device_type": "cyd"})
+09:47:46 [INFO] rgs.server.session_registry Registered: cyd-001 (type=cyd, schema=1.0, transport=wifi)
+09:47:46 [INFO] rgs.server.gateway HTTP Registration: cyd-001 (type=cyd, fw=None, addr=127.0.0.1:49674)
+09:47:46 [INFO] rgs.server.gateway HTTP client detected from 127.0.0.1:49678
+09:47:46 [INFO] rgs.server.gateway HTTP POST /update from 127.0.0.1:49678 (body={"device_id": "cyd-001", "alert": "Agent needs help"})
+09:47:46 [WARNING] rgs.server.gateway ALERT from cyd-001: Agent needs help
+09:47:46 [INFO] rgs.server.gateway Alert set for cyd-001: seq=4754 (lora=False)
+09:47:46 [INFO] rgs.server.gateway HTTP client detected from 127.0.0.1:49682
+09:47:46 [INFO] rgs.server.gateway HTTP GET /agents from 127.0.0.1:49682 (body=)
+09:47:49 [INFO] rgs.server.gateway HTTP client detected from 127.0.0.1:49696
+09:47:49 [INFO] rgs.server.gateway HTTP POST /heartbeat from 127.0.0.1:49696 (body={"device_id":"cyd-001"})
+09:47:49 [INFO] rgs.server.gateway HB response to cyd-001 includes alert: Agent needs help (seq=4754)
+09:47:54 [INFO] rgs.server.gateway HTTP client detected from 127.0.0.1:39860
+09:47:54 [INFO] rgs.server.gateway HTTP POST /register from 127.0.0.1:39860 (body={"device_id":"cyd-001","device_type":"cyd"})
+09:47:54 [INFO] rgs.server.session_registry Re-register: cyd-001 (type=cyd, schema=1.0, transport=wifi)
+09:47:54 [INFO] rgs.server.gateway HTTP Registration: cyd-001 (type=cyd, fw=None, addr=127.0.0.1:39860)
