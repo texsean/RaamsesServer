@@ -129,7 +129,13 @@ class LiveMonitor:
         self.save_state()
 
     def display_dashboard(self):
-        """Print a text-based htop-style dashboard."""
+        """Print a text-based htop-style dashboard. Adapts to terminal size."""
+        # Get terminal dimensions
+        import shutil
+        sz = shutil.get_terminal_size((80, 24))
+        term_w = sz.columns
+        term_h = sz.lines
+
         now = time.strftime("%H:%M:%S")
         uptime = int(time.time() - self.start_time)
 
@@ -137,69 +143,159 @@ class LiveMonitor:
         device_count = len(self.devices)
         alert_count = len(self.alerts)
         cmd_count = len(self.commands)
-        border = "═" * 70
+
+        # Inner width = terminal width (content rows are │...│ = term_w chars)
+        # Content area inside borders = term_w - 2 (subtract left │ and right │)
+        inner_w = max(40, term_w)
+        border = "═" * inner_w
+
+        # How many device/alert/command rows fit
+        # Reserve: 2 header borders, 2 status borders, 2 stats borders, 1 device header,
+        # 1 alerts header, 1 commands header, 1 footer border = ~10 lines overhead
+        avail_rows = max(3, term_h - 12)
+        device_rows = min(avail_rows // 3, 8) if self.devices else 0
+        alert_rows = min(avail_rows // 3, 5) if self.alerts else 0
+        cmd_rows = min(avail_rows // 3, 5) if self.commands else 0
+
         print(f"\r{border}", end="", flush=True)
-        print(f"\r│ {'RAAMSES LIVE SERVER MONITOR':^50s} │ {'● LIVE':^10s} {'● v1.1':^5s}│", end="", flush=True)
+        title_str = "RAAMSES LIVE SERVER MONITOR"
+        live_str = "● LIVE"
+        ver_str = "● v1.1"
+        # Center title in available space
+        left_pad = (inner_w - len(title_str) - len(live_str) - len(ver_str) - 4) // 2
+        print(f"\r│ {title_str:^{max(0,left_pad)}s} │ {live_str}  {ver_str}│", end="", flush=True)
         print(f"\r{border}", end="", flush=True)
 
-        # Row 1: Overview
+        # Row 1: Overview — 3 columns
+        # Line format: │ col1 │ col2 │ col3 │
+        # Total = 1+1+col1+1+1+col2+1+1+col3+1+1 = col1+col2+col3+10
         status = "ALL SYSTEMS NOMINAL" if device_count > 0 else "WAITING FOR DEVICES"
-        print(f"\r│ Status: {status:^45s} │ {now:^10s} │ {uptime}s │", end="", flush=True)
+        status_field = f"Status: {status}"
+        time_field = f"{now}"
+        uptime_field = f"{uptime}s"
+        avail_3 = inner_w - 10  # 10 = 4 separator positions * 2 + 2 borders
+        col1_w = avail_3 // 3
+        col2_w = max(len(time_field), avail_3 // 4)
+        col3_w = avail_3 - col1_w - col2_w
+        # Truncate fields to their column width
+        status_field = status_field[:col1_w]
+        time_field = time_field[:col2_w]
+        uptime_field = uptime_field[:col3_w]
+        print(f"\r│ {status_field:<{col1_w}s} │ {time_field:<{col2_w}s} │ {uptime_field:>{col3_w}s} │", end="", flush=True)
         print(f"\r{border}", end="", flush=True)
 
-        # Row 2: Stats
-        print(f"\r│ Devices: {device_count:^10d} │ Alerts: {alert_count:^6d} │ Commands: {cmd_count:^4d} │ Server: 127.0.0.1:{SERVER_PORT}", end="", flush=True)
+        # Row 2: Stats — 4 columns
+        # Line format: │ col1 │ col2 │ col3 │ col4 │
+        # Total = col1+col2+col3+col4 + 12 (5 separators * 2 + 2 borders)
+        stats1 = f"Devices: {device_count}"
+        stats2 = f"Alerts: {alert_count}"
+        stats3 = f"Commands: {cmd_count}"
+        stats4 = f"Server: 127.0.0.1:{SERVER_PORT}"
+        avail_4 = inner_w - 12
+        s1_w = max(len(stats1), min(12, avail_4 // 4))
+        s2_w = max(len(stats2), min(10, avail_4 // 4))
+        s3_w = max(len(stats3), min(12, avail_4 // 4))
+        s4_w = avail_4 - s1_w - s2_w - s3_w
+        # Truncate fields to column width
+        stats1 = stats1[:s1_w]
+        stats2 = stats2[:s2_w]
+        stats3 = stats3[:s3_w]
+        stats4 = stats4[:s4_w]
+        print(f"\r│ {stats1:<{s1_w}s} │ {stats2:<{s2_w}s} │ {stats3:<{s3_w}s} │ {stats4:<{s4_w}s} │", end="", flush=True)
         print(f"\r{border}", end="", flush=True)
 
-        # Row 3+: Device Table
+        # Row 3+: Device Table — 5 columns
+        # Line format: │ col1 │ col2 │ col3 │ col4 │ col5 │
+        # Total = col1+col2+col3+col4+col5 + 14 (6 separators * 2 + 2 borders)
         if self.devices:
-            print(f"\r│ {'─'*68}│", end="", flush=True)
-            print(f"\r│ {'Device ID':<20s} │ {'Type':<10s} │ {'Tier':<8s} │ {'Uptime':<10s} │ {'Battery':<8s} │", end="", flush=True)
-            print(f"\r│ {'─'*20} │ {'─'*10} │ {'─'*8} │ {'─'*10} │ {'─'*8} │", end="", flush=True)
-            for did, info in list(self.devices.items())[-8:]:
+            print(f"\r│ {'─'*(inner_w-2)}│", end="", flush=True)
+            avail_5 = inner_w - 14
+            id_w = max(8, min(20, avail_5 // 5))
+            type_w = max(4, min(10, avail_5 // 5))
+            tier_w = max(4, min(8, avail_5 // 5))
+            up_w = max(4, min(10, avail_5 // 5))
+            bat_w = avail_5 - id_w - type_w - tier_w - up_w
+            bat_w = max(4, bat_w)
+            # Truncate header fields
+            hdr_id = "Device ID"[:id_w]
+            hdr_type = "Type"[:type_w]
+            hdr_tier = "Tier"[:tier_w]
+            hdr_up = "Uptime"[:up_w]
+            hdr_bat = "Battery"[:bat_w]
+            print(f"\r│ {hdr_id:<{id_w}s} │ {hdr_type:<{type_w}s} │ {hdr_tier:<{tier_w}s} │ {hdr_up:<{up_w}s} │ {hdr_bat:<{bat_w}s} │", end="", flush=True)
+            print(f"\r│ {'─'*id_w} │ {'─'*type_w} │ {'─'*tier_w} │ {'─'*up_w} │ {'─'*bat_w} │", end="", flush=True)
+            for did, info in list(self.devices.items())[-device_rows:]:
                 dtype = info.get("type", "?")
                 tier = info.get("tier", "?")
                 up = info.get("uptime", "?") + "s"
                 bat = info.get("battery", "?") + "%" if info.get("battery") != "?" else "?"
-                reg = info.get("registered", "?")
-                print(f"\r│ {did:<20s} │ {dtype:<10s} │ {tier:<8s} │ {up:<10s} │ {bat:<8s} │", end="", flush=True)
+                # Truncate all fields to their column width
+                did = did[:id_w]
+                dtype = dtype[:type_w]
+                tier = tier[:tier_w]
+                up = up[:up_w]
+                bat = bat[:bat_w]
+                print(f"\r│ {did:<{id_w}s} │ {dtype:<{type_w}s} │ {tier:<{tier_w}s} │ {up:<{up_w}s} │ {bat:<{bat_w}s} │", end="", flush=True)
         else:
-            print(f"\r│ {'No devices registered yet. Waiting for emulator(s)...':^68}│", end="", flush=True)
+            no_dev = "No devices registered yet. Waiting for emulator(s)..."
+            print(f"\r│ {no_dev:^{inner_w-2}s}│", end="", flush=True)
 
         print(f"\r{border}", end="", flush=True)
 
         # Alerts section
         if self.alerts:
-            print(f"\r│ {'─'*68}│", end="", flush=True)
+            print(f"\r│ {'─'*(inner_w-2)}│", end="", flush=True)
             print(f"\r│ LATEST ALERTS:", end="", flush=True)
             print(f"\r│", end="", flush=True)
-            for ts, sev, title, msg in self.alerts[-5:]:
+            for ts, sev, title, msg in self.alerts[-alert_rows:]:
                 sev_color = {"CRITICAL": "!!!", "WARNING": "!! ", "INFO": "   "}.get(sev.upper(), "   ")
-                msg_short = msg[:45] if len(msg) > 45 else msg
+                # Truncate message to fit terminal width
+                msg_max = inner_w - 25
+                msg_short = msg[:msg_max] if len(msg) > msg_max else msg
                 print(f"\r│   [{ts}] {sev_color} [{sev.upper():<8s}] {title}: {msg_short}", end="", flush=True)
         else:
-            print(f"\r│ {'Waiting for alerts...':^68}│", end="", flush=True)
+            print(f"\r│ {'Waiting for alerts...':^{inner_w-2}s}│", end="", flush=True)
 
         print(f"\r{border}", end="", flush=True)
 
         # Commands section
         if self.commands:
-            print(f"\r│ {'─'*68}│", end="", flush=True)
+            print(f"\r│ {'─'*(inner_w-2)}│", end="", flush=True)
             print(f"\r│ LATEST COMMANDS:", end="", flush=True)
             print(f"\r│", end="", flush=True)
-            for ts, direction, target, action in self.commands[-5:]:
-                print(f"\r│   [{ts}] → {target:<15s} {action}", end="", flush=True)
+            for ts, direction, target, action in self.commands[-cmd_rows:]:
+                # Truncate action to fit
+                action_max = inner_w - 30
+                action_short = action[:action_max] if len(action) > action_max else action
+                target_short = target[:15]
+                print(f"\r│   [{ts}] → {target_short:<15s} {action_short}", end="", flush=True)
         else:
-            print(f"\r│ {'Waiting for commands...':^68}│", end="", flush=True)
+            print(f"\r│ {'Waiting for commands...':^{inner_w-2}s}│", end="", flush=True)
 
         print(f"\r{border}", end="", flush=True)
 
-        # Footer
+        # Footer — 4 columns
+        # Line format: │ col1 │ col2 │ col3 │ col4 │
+        # Total = col1+col2+col3+col4 + 12 (5 separators * 2 + 2 borders)
         total_alerts = len(self.alerts)
         critical = sum(1 for a in self.alerts if a[1].upper() == "CRITICAL")
         warnings = sum(1 for a in self.alerts if a[1].upper() == "WARNING")
         info = sum(1 for a in self.alerts if a[1].upper() == "INFO")
-        print(f"\r│ {'CRITICAL:'+str(critical):^18s} | {'WARNINGS:'+str(warnings):^18s} | {'INFO:'+str(info):^18s} | Heartbeats/sec: {device_count*0.1:.1f}{' '*(14-len(str(device_count*0.1)))}│", end="", flush=True)
+        hb = f"Heartbeats/sec: {device_count*0.1:.1f}"
+        avail_f = inner_w - 12
+        f1 = f"CRITICAL:{str(critical)}"
+        f2 = f"WARNINGS:{str(warnings)}"
+        f3 = f"INFO:{str(info)}"
+        f1_w = max(len(f1), min(12, avail_f // 4))
+        f2_w = max(len(f2), min(12, avail_f // 4))
+        f3_w = max(len(f3), min(10, avail_f // 4))
+        f4_w = avail_f - f1_w - f2_w - f3_w
+        # Truncate fields to column width
+        f1 = f1[:f1_w]
+        f2 = f2[:f2_w]
+        f3 = f3[:f3_w]
+        hb = hb[:f4_w]
+        print(f"\r│ {f1:<{f1_w}s} │ {f2:<{f2_w}s} │ {f3:<{f3_w}s} │ {hb:<{f4_w}s} │", end="", flush=True)
         print(f"\r{border}", end="", flush=True)
 
 

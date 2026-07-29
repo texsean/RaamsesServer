@@ -97,6 +97,10 @@ class RaamsesConsole:
         self.mode = mode
         self.running = False
 
+        # ---- terminal dimensions (auto-updated each render) ----
+        self.term_width = self.console.width
+        self.term_height = self.console.height
+
         # ---- server configuration ----
         self.config: dict[str, str] = {
             "blink_mode": "on",
@@ -153,6 +157,17 @@ class RaamsesConsole:
         # ---- helpers ----
         self._ensure_log_dir()
         self._seed_debug_log()
+
+    # ------------------------------------------------------------------
+    # Terminal size helpers
+    # ------------------------------------------------------------------
+
+    def _update_terminal_size(self) -> None:
+        """Read current terminal dimensions. Called every render frame."""
+        import shutil
+        sz = shutil.get_terminal_size((80, 24))
+        self.term_width = sz.columns
+        self.term_height = sz.lines
 
     # ------------------------------------------------------------------
     # Helpers
@@ -248,10 +263,16 @@ class RaamsesConsole:
 
     def _render_config_panel(self) -> Panel:
         """Left panel: Server configuration table."""
+        # Dynamically size columns based on available width
+        # Left panel gets ~1/3 of terminal width minus borders
+        panel_width = max(30, self.term_width // 3 - 2)
+        key_width = min(18, panel_width // 3)
+        val_width = max(10, panel_width - key_width - 12)
+
         tbl = Table(box=None)
-        tbl.add_column("Setting", style="cyan", width=18, justify="right")
-        tbl.add_column("Value", style="white", max_width=14)
-        tbl.add_column("", style="dim", max_width=10)
+        tbl.add_column("Setting", style="cyan", width=key_width, justify="right")
+        tbl.add_column("Value", style="white", max_width=val_width)
+        tbl.add_column("", style="dim", max_width=8)
 
         blink_on = self.config["blink_mode"] == "on"
         blink_display = "ON  " if blink_on else "OFF "
@@ -308,19 +329,32 @@ class RaamsesConsole:
 
         # Status helpers
         status_chars = {"active": "\u25cf", "idle": "\u25d0", "offline": "\u25cb"}
+        status_color = {"active": "green", "idle": "yellow", "offline": "red"}
 
-        for name, info in self.connected.items():
+        # Determine how many device icon columns fit
+        # Each icon block is ~14 chars wide + 2 spaces = 16
+        right_panel_width = max(40, (self.term_width * 2) // 3 - 2)
+        icon_cols = max(1, right_panel_width // 16)
+        # Cap at number of devices
+        icon_cols = min(icon_cols, len(self.connected))
+
+        # Render devices in a grid
+        devices_list = list(self.connected.items())
+        for i, (name, info) in enumerate(devices_list):
             icon_ascii = DEVICE_ICONS.get(name, DEVICE_ICONS["CYD-320"])
             icon_lines = icon_ascii.split("\n")
 
             dot = status_chars.get(info["status"], "\u25cb")
-            status_color = {"active": "green", "idle": "yellow", "offline": "red"}
             color = status_color.get(info["status"], "red")
             # Use Rich inline markup - Panel will auto-parse strings
             block_lines.append(f"  [bold {color}]{dot}[/] {name:<10s} {info['status'].upper():<8s} {info['task']}")
             # Print middle lines of icon
             for il in icon_lines[2:6]:
                 block_lines.append(f"    {il[3:]}")
+
+            # Add blank line between rows of icons (not after last in row or last overall)
+            if (i + 1) % icon_cols == 0 and i < len(devices_list) - 1:
+                block_lines.append("")
 
         return Panel(
             "\n".join(block_lines),  # plain str so Panel auto-parses markup
@@ -330,11 +364,17 @@ class RaamsesConsole:
 
     def _render_comm_log(self) -> Panel:
         """Right-middle: raw communication messages."""
+        # Adapt number of visible comm lines to terminal height
+        # Right column has 3 sections; comm gets roughly 1/3 of the main area
+        # Main area height = term_height - 3 (header) - 2 (borders)
+        main_height = max(8, self.term_height - 5)
+        comm_lines = max(5, main_height // 3 - 2)
+
         if not self.comm_log:
             content = Text("(no communication yet)", style="dim")
         else:
             content = Text()
-            for entry in self.comm_log[-30:]:
+            for entry in self.comm_log[-comm_lines:]:
                 if entry.startswith("[IN  ]"):
                     content.append(entry + "\n", style="green")
                 elif entry.startswith("[OUT ]"):
@@ -352,8 +392,13 @@ class RaamsesConsole:
         """Right-bottom (1/3): tailing the selected log file."""
         self.active_log_lines = self._read_log(self.active_log)
 
+        # Adapt visible log lines to terminal height
+        main_height = max(8, self.term_height - 5)
+        log_lines = max(5, main_height // 3 - 2)
+        visible_lines = self.active_log_lines[-log_lines:]
+
         content = Text()
-        for line in self.active_log_lines:
+        for line in visible_lines:
             parts = line.split("\t", 2)
             if len(parts) == 3:
                 ts, method, detail = parts
@@ -375,6 +420,9 @@ class RaamsesConsole:
 
     def render_full(self) -> Layout:
         """Full dashboard: left=config+logfile | right=devices|comm|active-log."""
+        # Update terminal dimensions for this frame
+        self._update_terminal_size()
+
         layout = Layout(name="root")
 
         # Top row: header
@@ -391,6 +439,7 @@ class RaamsesConsole:
                 Text("v2.0.0", style="dim blue"),
                 Text(f" [{self.mode}]", style="dim"),
                 Text(f" [Blink:{blink_text}]", style=blink_style),
+                Text(f"  {self.term_width}x{self.term_height}", style="dim"),
                 Text("  "),
                 Text(f"up {mins}m {secs}s", style="dim"),
             ),
@@ -400,13 +449,21 @@ class RaamsesConsole:
         )
         layout.split_column(
             Layout(header, size=3),
-            Layout(name="main"),
+            Layout(name="main", ratio=1),
         )
 
-        # Main area split left / right
+        # Main area split left / right — ratio adapts to width
+        # On narrow terminals, give more space to the right panel
+        if self.term_width < 100:
+            left_ratio = 1
+            right_ratio = 2
+        else:
+            left_ratio = 2
+            right_ratio = 3
+
         layout["main"].split_row(
-            Layout(name="left", ratio=1),
-            Layout(name="right", ratio=2),
+            Layout(name="left", ratio=left_ratio),
+            Layout(name="right", ratio=right_ratio),
         )
 
         # Left column: config + log files
@@ -415,12 +472,21 @@ class RaamsesConsole:
             Layout(self._render_log_list_panel(), ratio=1),
         )
 
-        # Right column: devices + comm + active log (bottom third)
-        layout["right"].split_column(
-            Layout(self._render_device_icons(), ratio=2),
-            Layout(self._render_comm_log(), ratio=2),
-            Layout(self._render_active_log(), ratio=1),
-        )
+        # Right column: devices + comm + active log
+        # Ratios adapt to terminal height
+        if self.term_height < 20:
+            # Very short terminal — minimize devices, give more to logs
+            layout["right"].split_column(
+                Layout(self._render_device_icons(), ratio=1),
+                Layout(self._render_comm_log(), ratio=2),
+                Layout(self._render_active_log(), ratio=2),
+            )
+        else:
+            layout["right"].split_column(
+                Layout(self._render_device_icons(), ratio=2),
+                Layout(self._render_comm_log(), ratio=2),
+                Layout(self._render_active_log(), ratio=1),
+            )
 
         return layout
 

@@ -47,6 +47,9 @@ class GatewayServer:
         host: str = "0.0.0.0",
         port: int = 8765,
         heartbeat_timeout: int = 90,
+        enable_lora: bool = False,
+        lora_serial_port: Optional[str] = None,
+        lora_tcp_host: Optional[str] = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -64,6 +67,12 @@ class GatewayServer:
         # Trust but Verify engine
         self._verifier = TrustVerifier(project_root=Path(__file__).resolve().parent.parent.parent.parent.parent)
 
+        # LoRa bridge (optional)
+        self._lora_bridge: Optional[object] = None  # LoRaBridge
+        self._enable_lora = enable_lora
+        self._lora_serial_port = lora_serial_port
+        self._lora_tcp_host = lora_tcp_host
+
     # ── Lifecycle ──────────────────────────────────────────────────────────
 
     def start(self) -> None:
@@ -77,6 +86,10 @@ class GatewayServer:
 
         logger.info("Raamses Gateway listening on %s:%d", self._host, self._port)
         print(f"[Gateway] Listening on {self._host}:{self._port}")
+
+        # Start LoRa bridge if enabled
+        if self._enable_lora:
+            self._start_lora_bridge()
 
         # Start stale-agent cleanup thread
         self._cleanup_thread = threading.Thread(
@@ -108,6 +121,15 @@ class GatewayServer:
     def stop(self) -> None:
         """Stop the gateway server and close all connections."""
         self._running = False
+
+        # Stop LoRa bridge
+        if self._lora_bridge is not None:
+            try:
+                self._lora_bridge.stop()
+            except Exception as e:
+                logger.warning("Error stopping LoRa bridge: %s", e)
+            self._lora_bridge = None
+
         if self._server_socket:
             try:
                 self._server_socket.close()
@@ -197,6 +219,70 @@ class GatewayServer:
         # Unknown gateway command — log and return info
         logger.info("Gateway command (not implemented): %s", cmd)
         return f"Command '{cmd}' accepted (no handler yet)"
+
+    # ── LoRa Bridge ──────────────────────────────────────────────────────
+
+    def _start_lora_bridge(self) -> None:
+        """Start the LoRa bridge to connect Meshtastic radio."""
+        try:
+            from rgs.lora.bridge import LoRaBridge
+            self._lora_bridge = LoRaBridge(
+                registry=self._registry,
+                serial_port=self._lora_serial_port,
+                tcp_host=self._lora_tcp_host,
+                on_register=self._on_lora_register,
+                on_heartbeat=self._on_lora_heartbeat,
+            )
+            self._lora_bridge.start()
+            logger.info("LoRa bridge started (mock=%s)", self._lora_bridge.is_mock_mode)
+        except Exception as e:
+            logger.error("Failed to start LoRa bridge: %s", e)
+            self._lora_bridge = None
+
+    def _on_lora_register(self, device_id: str, device_type: str,
+                          firmware: str, node_id: int) -> None:
+        """Callback when a LoRa device registers."""
+        logger.info("LoRa device registered: %s (type=%s, node=%d)",
+                    device_id, device_type, node_id)
+
+    def _on_lora_heartbeat(self, device_id: str, node_id: int, status: int) -> None:
+        """Callback when a LoRa device sends a heartbeat."""
+        logger.info("LoRa heartbeat: %s (node=%d, status=%d)",
+                    device_id, node_id, status)
+
+    def _broadcast_alert_on_lora(self) -> Optional[int]:
+        """Broadcast an ALERT on LoRa when an agent needs help.
+
+        Called when the gateway detects an agent alert via HTTP.
+        Returns the alert sequence number, or None if LoRa is not available.
+        """
+        if self._lora_bridge is None:
+            return None
+        try:
+            seq = self._lora_bridge.broadcast_alert()
+            logger.info("Alert broadcast on LoRa: seq=%d", seq)
+            return seq
+        except Exception as e:
+            logger.error("LoRa alert broadcast failed: %s", e)
+            return None
+
+    def _broadcast_clear_on_lora(self, seq: int) -> None:
+        """Broadcast a CLEAR on LoRa when an agent alert is resolved.
+
+        Called when the gateway detects an agent alert has cleared.
+        """
+        if self._lora_bridge is None:
+            return
+        try:
+            self._lora_bridge.broadcast_clear(seq)
+            logger.info("Clear broadcast on LoRa: seq=%d", seq)
+        except Exception as e:
+            logger.error("LoRa clear broadcast failed: %s", e)
+
+    @property
+    def lora_bridge(self):
+        """Access the LoRa bridge (or None if not enabled)."""
+        return self._lora_bridge
 
     def _deliver_to_agent_connection(
         self, device_id: str, session: object, raw_command: str
@@ -434,13 +520,22 @@ class GatewayServer:
         dev_type = data.get("device_type", "cyd")
         schema_ver = data.get("schema_version", "1.0")
         firmware = data.get("firmware_version") or data.get("firmware")
+        source = data.get("source", "wifi")  # "wifi" or "lora_relay"
+        node_id = data.get("node_id")  # Meshtastic node number (for lora_relay)
 
         if not dev_id:
             # Generate one from MAC or IP if missing
             dev_id = f"http-{addr[0].replace('.', '-')}-{datetime.now(timezone.utc).strftime('%H%M%S')}"
 
+        # Determine transport based on source field
+        transport = "lora_relay" if source == "lora_relay" else "wifi"
+
         try:
-            session = self._registry.register(dev_id, dev_type, schema_ver, firmware)
+            session = self._registry.register(
+                dev_id, dev_type, schema_ver, firmware,
+                transport=transport,
+                node_id=node_id,
+            )
             # Attach conn as a file wrapper for sendall
             session.connection = conn
 
@@ -545,6 +640,30 @@ class GatewayServer:
         alert = data.get("alert", "")
         if alert:
             logger.warning("ALERT from %s: %s", dev_id, alert)
+            # Set alert state in registry and broadcast on LoRa
+            seq = self._broadcast_alert_on_lora()
+            if seq is not None:
+                self._registry.set_alert(dev_id, seq)
+                logger.info("Alert broadcast on LoRa for %s: seq=%d", dev_id, seq)
+
+        # Check for alert clear — if "alert_clear" field is present, or
+        # if "alert" is empty and the agent previously had an alert
+        alert_clear = data.get("alert_clear", "")
+        if alert_clear:
+            # Explicit clear request
+            session = self._registry.get(dev_id)
+            if session and session.alert_active:
+                self._broadcast_clear_on_lora(session.alert_seq)
+                self._registry.clear_alert(dev_id)
+                logger.info("Alert cleared for %s: seq=%d", dev_id, session.alert_seq)
+        elif not alert:
+            # No alert in this update — check if we need to auto-clear
+            session = self._registry.get(dev_id)
+            if session and session.alert_active:
+                self._broadcast_clear_on_lora(session.alert_seq)
+                self._registry.clear_alert(dev_id)
+                logger.info("Alert auto-cleared for %s (no alert in update): seq=%d",
+                           dev_id, session.alert_seq)
 
         # Status fields
         status_fields = {}
@@ -597,6 +716,10 @@ class GatewayServer:
                 "status": s.status,
                 "current_task": s.current_task,
                 "last_heartbeat": s.last_heartbeat.isoformat() if s.last_heartbeat else None,
+                "transport": s.transport,
+                "node_id": s.node_id,
+                "alert_active": s.alert_active,
+                "alert_seq": s.alert_seq if s.alert_active else None,
             })
         resp = {
             "count": len(agents),
@@ -856,3 +979,35 @@ class GatewayServer:
     @property
     def port(self) -> int:
         return self._port
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Raamses Gateway Server")
+    parser.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8765, help="TCP port (default: 8765)")
+    parser.add_argument("--timeout", type=int, default=90, help="Heartbeat timeout in seconds (default: 90)")
+    parser.add_argument("--lora", action="store_true", help="Enable LoRa bridge (Meshtastic radio)")
+    parser.add_argument("--lora-serial", default=None, help="LoRa serial port (e.g. /dev/ttyUSB0)")
+    parser.add_argument("--lora-tcp", default=None, help="LoRa TCP host (e.g. 192.168.1.100)")
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    server = GatewayServer(
+        host=args.host, port=args.port, heartbeat_timeout=args.timeout,
+        enable_lora=args.lora, lora_serial_port=args.lora_serial,
+        lora_tcp_host=args.lora_tcp,
+    )
+    print(f"[Gateway] Listening on {args.host}:{args.port}", flush=True)
+    if args.lora:
+        print(f"[Gateway] LoRa bridge enabled (serial={args.lora_serial}, tcp={args.lora_tcp})", flush=True)
+    try:
+        server.start()
+    except KeyboardInterrupt:
+        print("\n[Gateway] Shutting down...", flush=True)

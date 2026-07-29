@@ -30,6 +30,11 @@ class AgentSession:
     task_assigned_at: Optional[datetime] = None
     last_heartbeat: Optional[datetime] = None
     registered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # LoRa support: transport type and Meshtastic node number
+    transport: str = "wifi"             # "wifi" | "lora" | "lora_relay"
+    node_id: Optional[int] = None       # Meshtastic node number (for LoRa devices)
+    alert_active: bool = False          # True if this agent currently has an active alert
+    alert_seq: int = 0                 # last alert sequence number for this agent
 
     def mark_heartbeat(self) -> None:
         self.last_heartbeat = datetime.now(timezone.utc)
@@ -61,10 +66,15 @@ class SessionRegistry:
     def register(self, device_id: str, device_type: str,
                  schema_version: str, firmware_version: Optional[str] = None,
                  capabilities: Optional[dict] = None,
-                 connection: object = None) -> AgentSession:
+                 connection: object = None,
+                 transport: str = "wifi",
+                 node_id: Optional[int] = None) -> AgentSession:
         """Register or re-register an agent. Returns the session object.
         
         Optionally accepts a connection object for O(1) lookup by connection.
+        transport: "wifi" for direct HTTP/TCP, "lora" for LoRa-only devices,
+                   "lora_relay" for LoRa devices relayed through a WiFi bridge.
+        node_id: Meshtastic node number for LoRa devices.
         """
         with self._lock:
             if device_id in self._sessions:
@@ -74,9 +84,11 @@ class SessionRegistry:
                 session.firmware_version = firmware_version
                 session.capabilities = capabilities
                 session.status = "active"
+                session.transport = transport
+                session.node_id = node_id
                 session.mark_heartbeat()
-                logger.info("Re-register: %s (type=%s, schema=%s)",
-                            device_id, device_type, schema_version)
+                logger.info("Re-register: %s (type=%s, schema=%s, transport=%s)",
+                            device_id, device_type, schema_version, transport)
             else:
                 session = AgentSession(
                     device_id=device_id,
@@ -84,11 +96,13 @@ class SessionRegistry:
                     schema_version=schema_version,
                     firmware_version=firmware_version,
                     capabilities=capabilities,
+                    transport=transport,
+                    node_id=node_id,
                 )
                 session.mark_heartbeat()
                 self._sessions[device_id] = session
-                logger.info("Registered: %s (type=%s, schema=%s)",
-                            device_id, device_type, schema_version)
+                logger.info("Registered: %s (type=%s, schema=%s, transport=%s)",
+                            device_id, device_type, schema_version, transport)
 
             # Update connection index if a connection was provided
             if connection is not None:
@@ -176,3 +190,56 @@ class SessionRegistry:
                 if session.connection is conn:
                     return session
             return None
+
+    def get_by_node_id(self, node_id: int) -> Optional[AgentSession]:
+        """Look up a session by Meshtastic node number (for LoRa devices)."""
+        with self._lock:
+            for session in self._sessions.values():
+                if session.node_id == node_id:
+                    return session
+            return None
+
+    def list_by_transport(self, transport: str) -> list[AgentSession]:
+        """Return all active sessions with the given transport type."""
+        with self._lock:
+            return [
+                s for s in self._sessions.values()
+                if s.status in ("active", "paused") and s.transport == transport
+            ]
+
+    def set_alert(self, device_id: str, seq: int) -> bool:
+        """Mark an agent as having an active alert with the given sequence.
+        Returns True if the agent is registered."""
+        with self._lock:
+            session = self._sessions.get(device_id)
+            if session is not None:
+                session.alert_active = True
+                session.alert_seq = seq
+                return True
+            return False
+
+    def clear_alert(self, device_id: str) -> bool:
+        """Mark an agent's alert as resolved.
+        Returns True if the agent is registered."""
+        with self._lock:
+            session = self._sessions.get(device_id)
+            if session is not None:
+                session.alert_active = False
+                return True
+            return False
+
+    def get_alert_state(self, device_id: str) -> Optional[bool]:
+        """Return the alert_active state for an agent, or None if not registered."""
+        with self._lock:
+            session = self._sessions.get(device_id)
+            if session is not None:
+                return session.alert_active
+            return None
+
+    def list_alerted(self) -> list[AgentSession]:
+        """Return all active sessions that currently have an alert."""
+        with self._lock:
+            return [
+                s for s in self._sessions.values()
+                if s.status in ("active", "paused") and s.alert_active
+            ]

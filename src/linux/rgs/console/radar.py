@@ -80,6 +80,12 @@ class RADARConsole:
         self.port = port
         self.log_path = log_path or self._find_gateway_log()
 
+        # Terminal dimensions (updated each frame)
+        import shutil
+        sz = shutil.get_terminal_size((80, 24))
+        self.term_width = sz.columns
+        self.term_height = sz.lines
+
         # Connected agents from gateway session registry
         self.agents: dict[str, dict] = {}
         self._agent_lock = threading.Lock()
@@ -98,6 +104,13 @@ class RADARConsole:
 
         # Running state
         self.running = False
+
+    def _update_terminal_size(self) -> None:
+        """Read current terminal dimensions."""
+        import shutil
+        sz = shutil.get_terminal_size((80, 24))
+        self.term_width = sz.columns
+        self.term_height = sz.lines
 
     def _find_gateway_log(self) -> str:
         """Try to find the gateway log file."""
@@ -248,6 +261,7 @@ class RADARConsole:
 
     def render(self) -> Panel:
         """Render the full dashboard as a Rich Panel with plain text content."""
+        self._update_terminal_size()
         self._blink_cycle += 1
 
         # Query real gateway data
@@ -256,11 +270,18 @@ class RADARConsole:
             with self._agent_lock:
                 self.agents = new_agents
 
+        # Adapt number of visible lines to terminal height
+        # Reserve ~4 lines for header/borders, split rest between 3 sections
+        avail_height = max(6, self.term_height - 6)
+        agent_lines = max(3, avail_height // 3)
+        comm_lines_count = max(3, avail_height // 3)
+        log_lines_count = max(3, avail_height // 3)
+
         # Build the text content
         header = self._render_header().plain
-        agents_text = self._agent_icons_text()
-        comm_lines = self._read_comm_log()[-8:]
-        log_tail = self._read_gateway_log()[-8:]
+        agents_text = self._agent_icons_text(max_agents=agent_lines)
+        comm_lines = self._read_comm_log()[-comm_lines_count:]
+        log_tail = self._read_gateway_log()[-log_lines_count:]
 
         body = f"[bold green]● CONNECTED AGENTS[/]\n{agents_text}\n"
         body += f"\n[bold blue]◆ COMM[/]\n"
@@ -275,15 +296,17 @@ class RADARConsole:
             padding=(0, 1),
         )
 
-    def _agent_icons_text(self) -> str:
-        """Text version of agent icons."""
+    def _agent_icons_text(self, max_agents: int = 6) -> str:
+        """Text version of agent icons. Adapts number shown to terminal size."""
         lines = []
         blink = self._blink_states[self._blink_cycle % len(self._blink_states)]
         with self._agent_lock:
             agents = list(self.agents.items())
         if not agents:
             return "[dim]No agents connected[/]"
-        for dev_id, info in agents[:6]:
+        # Limit agents shown based on terminal height
+        agents = agents[:max_agents]
+        for dev_id, info in agents:
             # Pick icon based on device type from agent dict
             dev_type = info.get("type", "cyd").lower()
             if dev_type not in DEVICE_ICONS:
@@ -306,7 +329,7 @@ class RADARConsole:
         """Render the dashboard as a plain string (no TTY needed)."""
         from io import StringIO
         buf = StringIO()
-        tmp_console = Console(file=buf, force_terminal=True, width=120, soft_wrap=True)
+        tmp_console = Console(file=buf, force_terminal=True, width=self.term_width, soft_wrap=True)
         panel = self.render()
         tmp_console.print(panel)
         return buf.getvalue()

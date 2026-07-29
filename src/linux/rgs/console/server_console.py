@@ -177,6 +177,19 @@ class ServerAwareConsole:
         self._last_heartbeat = 0
         self.register_sent = False
 
+        # Terminal dimensions (updated each frame)
+        import shutil
+        sz = shutil.get_terminal_size((80, 24))
+        self.term_width = sz.columns
+        self.term_height = sz.lines
+
+    def _update_terminal_size(self) -> None:
+        """Read current terminal dimensions."""
+        import shutil
+        sz = shutil.get_terminal_size((80, 24))
+        self.term_width = sz.columns
+        self.term_height = sz.lines
+
     def _connect_to_server(self):
         if not self.connected:
             print(f"\n[Console] Connecting to {self.host}:{self.port} ...", flush=True)
@@ -242,11 +255,13 @@ class ServerAwareConsole:
         return Panel(table, title="Server Stats", border_style="green")
 
     def render_alerts(self):
+        # Adapt number of alerts shown to terminal height
+        max_alerts = max(4, self.term_height // 4)
         if not self._server or not self._server.alerts:
             content = Text("No alerts", style="dim")
         else:
             content = Text()
-            for a in self._server.alerts[-8:]:
+            for a in self._server.alerts[-max_alerts:]:
                 color = {"critical": "red", "warning": "yellow", "info": "green"}.get(
                     a.get("severity", ""), "white")
                 sev = a.get("severity", "?").upper()
@@ -297,16 +312,26 @@ class ServerAwareConsole:
 
     def render_full(self):
         layout = Layout()
+        # Adapt log height to terminal height
+        log_h = max(5, min(12, self.term_height // 3))
         layout.split_column(
             Layout(self.render_header(), size=3),
             Layout(name="main", ratio=5),
-            Layout(self.render_log(), size=8),
+            Layout(self.render_log(), size=log_h),
         )
-        layout["main"].split_row(
-            Layout(self.render_overview(), ratio=2),
-            Layout(self.render_alerts(), ratio=3),
-            Layout(self.render_devices(), ratio=2),
-        )
+        # Adapt column ratios to width
+        if self.term_width < 80:
+            layout["main"].split_row(
+                Layout(self.render_overview(), ratio=1),
+                Layout(self.render_alerts(), ratio=2),
+                Layout(self.render_devices(), ratio=1),
+            )
+        else:
+            layout["main"].split_row(
+                Layout(self.render_overview(), ratio=2),
+                Layout(self.render_alerts(), ratio=3),
+                Layout(self.render_devices(), ratio=2),
+            )
         return layout
 
     def render_cyd(self):
@@ -317,16 +342,20 @@ class ServerAwareConsole:
         if self._server and self._server.alerts:
             last = self._server.alerts[-1]
             content.append(f"Alert: {last.get('message', '?')[:30]}\n", style="red")
-        return Panel(content, title="CYD", border_style="green", width=42, height=16)
+        # Adapt width to terminal — cap at terminal width but keep minimum
+        panel_w = min(42, max(30, self.term_width - 2))
+        return Panel(content, title="CYD", border_style="green", width=panel_w, height=16)
 
     def render_epaper(self):
         content = Text()
         content.append("RAAMSES e-Paper\n", style="bold white")
         content.append(f"Status: {self.agent_status}\n")
         content.append(f"Dev: {len(self._server.devices) if self._server else 0}\n")
-        return Panel(content, title="E-Paper", border_style="white", width=38, height=16)
+        panel_w = min(38, max(28, self.term_width - 2))
+        return Panel(content, title="E-Paper", border_style="white", width=panel_w, height=16)
 
     def render(self):
+        self._update_terminal_size()
         if self.mode == "full":
             return self.render_full()
         elif self.mode == "cyd":
