@@ -1,0 +1,12 @@
+# Agent Bus log — started 2026-07-31T08:12:30.380163+00:00
+{"timestamp": "2026-07-31T08:12:30.380437+00:00", "event": "bus_start", "data": {"host": "0.0.0.0", "port": 8787}}
+{"timestamp": "2026-07-31T08:12:41.616551+00:00", "event": "register", "data": {"name": "hermes", "role": "orchestrator", "metadata": {"location": "pi"}}}
+{"timestamp": "2026-07-31T08:12:41.624820+00:00", "event": "register", "data": {"name": "orion", "role": "firmware", "metadata": {"device": "heltec_v3"}}}
+{"timestamp": "2026-07-31T08:12:41.633106+00:00", "event": "register", "data": {"name": "codex", "role": "coder", "metadata": {"location": "remote"}}}
+{"timestamp": "2026-07-31T08:12:46.996974+00:00", "event": "send", "data": {"id": "1575e11043c4", "from": "hermes", "to": "orion", "text": "build done, test the firmware", "type": "status", "timestamp": "2026-07-31T08:12:46.996950+00:00", "acked": false}}
+{"timestamp": "2026-07-31T08:12:47.005384+00:00", "event": "send", "data": {"id": "8b92bc71d412", "from": "orion", "to": "hermes", "text": "got it, flashing now", "type": "text", "timestamp": "2026-07-31T08:12:47.005360+00:00", "acked": false}}
+{"timestamp": "2026-07-31T08:12:47.013919+00:00", "event": "send", "data": {"id": "21280da4fe03", "from": "codex", "to": "hermes", "text": "PR submitted, need review", "type": "command", "timestamp": "2026-07-31T08:12:47.013900+00:00", "acked": false}}
+{"timestamp": "2026-07-31T08:13:04.277956+00:00", "event": "inbox_poll", "data": {"agent": "hermes", "count": 2}}
+{"timestamp": "2026-07-31T08:13:04.315918+00:00", "event": "inbox_poll", "data": {"agent": "orion", "count": 1}}
+{"timestamp": "2026-07-31T08:13:07.914970+00:00", "event": "ack", "data": {"id": "1575e11043c4", "from": "hermes", "to": "orion"}}
+{"timestamp": "2026-07-31T08:13:07.923371+00:00", "event": "inbox_poll", "data": {"agent": "orion", "count": 0}}

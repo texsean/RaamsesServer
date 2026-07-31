@@ -7,3 +7,5 @@
 02:44:31 [INFO] rgs.server.gateway HTTP Registration: test-stats-001 (type=heltec_v3, fw=1.0, addr=127.0.0.1:52782)
 02:44:33 [INFO] rgs.server.gateway HTTP client detected from 127.0.0.1:52786
 02:44:33 [INFO] rgs.server.gateway HTTP POST /heartbeat from 127.0.0.1:52786 (body={"device_id":"test-stats-001"})
+02:46:16 [WARNING] rgs.server.session_registry Stale agent removed: test-stats-001 (last heartbeat 2026-07-31 07:44:33.886004+00:00)
+02:46:16 [INFO] rgs.server.gateway Cleaned up 1 stale agent(s): test-stats-001
