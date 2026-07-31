@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import socket
 import threading
@@ -496,10 +497,16 @@ class GatewayServer:
             self._http_report(conn, addr, body)
         elif method == "GET" and path == "/siteid":
             self._http_siteid(conn, addr)
+        elif method == "GET" and path == "/stats":
+            self._send_http_response(
+                conn, 200, "OK",
+                json.dumps(self._get_gateway_stats()),
+                content_type="application/json",
+            )
         elif method == "GET" and path == "/":
             self._send_http_response(
                 conn, 200, "OK",
-                'Raamses Gateway — send POST /register, POST /heartbeat, POST /update, GET /verify, POST /report',
+                'Raamses Gateway — send POST /register, POST /heartbeat, POST /update, GET /agents, GET /stats, GET /verify, POST /report',
             )
         else:
             self._send_http_response(
@@ -507,6 +514,104 @@ class GatewayServer:
                 '{"error": "unknown endpoint"}',
                 content_type="application/json",
             )
+
+    # ── Gateway system stats ────────────────────────────────────────────
+
+    _gateway_start_time = time.time()
+
+    def _get_gateway_stats(self) -> dict:
+        """Collect real Pi/system health data for display devices.
+
+        Returns cpu_percent, mem info, cpu_temp_c, uptime, load_avg, and
+        disk usage. Uses only stdlib so it works on any Linux without extra
+        dependencies. Values are sampled on each call (cheap enough for a
+        30s heartbeat interval).
+        """
+        stats: dict = {}
+
+        # CPU temperature (Pi has /sys/class/thermal/thermal_zone0/temp)
+        try:
+            with open("/sys/class/thermal/thermal_zone0/temp") as f:
+                stats["cpu_temp_c"] = round(int(f.read().strip()) / 1000.0, 1)
+        except Exception:
+            pass
+
+        # CPU usage — two-sample /proc/stat method (100ms apart)
+        try:
+            with open("/proc/stat") as f:
+                parts1 = f.readline().split()[1:]
+            idle1 = int(parts1[3])
+            total1 = sum(int(x) for x in parts1)
+            time.sleep(0.1)
+            with open("/proc/stat") as f:
+                parts2 = f.readline().split()[1:]
+            idle2 = int(parts2[3])
+            total2 = sum(int(x) for x in parts2)
+            total_delta = total2 - total1
+            idle_delta = idle2 - idle1
+            if total_delta > 0:
+                stats["cpu_percent"] = round(
+                    (total_delta - idle_delta) / total_delta * 100, 1
+                )
+        except Exception:
+            pass
+
+        # Memory from /proc/meminfo
+        try:
+            mem_total = mem_avail = None
+            with open("/proc/meminfo") as f:
+                for line in f:
+                    if line.startswith("MemTotal:"):
+                        mem_total = int(line.split()[1])
+                    elif line.startswith("MemAvailable:"):
+                        mem_avail = int(line.split()[1])
+            if mem_total and mem_avail:
+                stats["mem_total_mb"] = round(mem_total / 1024)
+                stats["mem_free_mb"] = round(mem_avail / 1024)
+                stats["mem_used_percent"] = round(
+                    (mem_total - mem_avail) / mem_total * 100, 1
+                )
+        except Exception:
+            pass
+
+        # Load average (1, 5, 15 min)
+        try:
+            load1, load5, load15 = os.getloadavg()
+            stats["load_avg"] = {
+                "1m": round(load1, 2),
+                "5m": round(load5, 2),
+                "15m": round(load15, 2),
+            }
+        except Exception:
+            pass
+
+        # Gateway uptime (since this process started)
+        try:
+            stats["uptime_seconds"] = int(time.time() - self._gateway_start_time)
+        except Exception:
+            pass
+
+        # Disk usage on / (root partition)
+        try:
+            st = os.statvfs("/")
+            disk_total = st.f_blocks * st.f_frsize
+            disk_free = st.f_bavail * st.f_frsize
+            if disk_total > 0:
+                stats["disk_total_gb"] = round(disk_total / 1e9, 1)
+                stats["disk_free_gb"] = round(disk_free / 1e9, 1)
+                stats["disk_used_percent"] = round(
+                    (disk_total - disk_free) / disk_total * 100, 1
+                )
+        except Exception:
+            pass
+
+        # Number of active registered agents
+        try:
+            stats["agents_registered"] = len(self._registry.list_active())
+        except Exception:
+            pass
+
+        return stats
 
     def _http_register(self, conn: socket.socket, addr: tuple, body: str) -> None:
         """Handle POST /register with JSON payload."""
@@ -558,6 +663,8 @@ class GatewayServer:
             if session.alert_active:
                 resp["alert"] = "Agent needs help"
                 resp["alert_seq"] = session.alert_seq
+            # Include gateway system stats for display devices
+            resp["gateway_stats"] = self._get_gateway_stats()
             self._send_http_response(
                 conn, 200, "OK",
                 json.dumps(resp),
@@ -608,6 +715,8 @@ class GatewayServer:
             if alert_msg:
                 resp["alert"] = alert_msg
                 resp["alert_seq"] = alert_seq
+            # Include gateway system stats for display devices
+            resp["gateway_stats"] = self._get_gateway_stats()
             self._send_http_response(
                 conn, 200, "OK",
                 json.dumps(resp),
