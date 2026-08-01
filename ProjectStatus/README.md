@@ -1,74 +1,125 @@
 # RGS (Raamses Gateway Server) — Project Status
 
-**Last Updated:** 2026-07-19
+**Last Updated:** 2026-08-01
 
 ## Current Focus
 
-Cross-platform gateway server (Linux + Windows) with terminal/Android console for monitoring AI agents connected to the Raamses protocol.
+Wrapping up the full Raamses product: Linux gateway server + device firmware for
+all 5 display devices. The system is an agent monitoring platform — devices
+connect to the gateway over WiFi (HTTP/JSON), display real-time agent stats,
+and show alerts when agents need help.
 
-### Active Work
-- Gateway Server TCP router (port 8765) with classification & delivery
-- Session Registry (thread-safe agent tracking, heartbeat detection)
-- Message Router (gateway-local vs agent-targeted dispatch)
-- Terminal Console (htop-style dashboard — 3-sectioned: config, devices, logs)
-- Modular XSD schema definitions
-- Python package renamed `raamses` → `rgs` (internal paths only; classes preserved)
+## What's Done
 
-### Gateway Routing Design (2026-07-19)
-- **Type 1: Gateway Communication** — direct protocol/admin commands execute locally (e.g., `register`, `heartbeat`, `status`)
-- **Type 2: Agent-Targeted Commands** — routed to specific agent via `device_id` (e.g., `/cmd <id> <action>`, `/tell`, `/ask`, `/pause`, `/resume`)
-- **Race handling:** If agent has moved on, command is **dropped and logged** (not queued)
+### Linux Gateway Server (port 8765)
+- TCP + HTTP dual-protocol message router
+- Session registry (thread-safe, heartbeat tracking, stale detection)
+- Message router (gateway-local vs agent-targeted dispatch)
+- HTTP JSON endpoints: /register, /heartbeat, /update, /stats, /agents, /status, /verify, /report, /siteid
+- Gateway stats (CPU, RAM, disk, temp, uptime — stdlib only, no psutil)
+- Alert state in heartbeat/register responses ("Agent needs help")
+- Trust-Verify (filesystem + git inspection)
+- Report-Issue (log zip + mailto URL)
+- Site-ID (unique UUID per installation)
+- 158 tests passing (QA/tests/)
 
-### Key Design Decisions
-- Never infer capabilities from model names
-- Missing fields = unsupported
-- Public `device_id` must be random UUID generated at onboarding
-- All booleans as `true`/`false`
-- Timestamps in ISO 8601 UTC
-- Authentication outside the protocol payload (TLS + client certs / bearer tokens)
+### LoRa Bridge
+- Meshtastic + RangePi backends
+- Binary protocol v1.1 (ALERT, ACK, CLEAR, HEARTBEAT, REGISTER, BUZZ)
+- Mock mode when no radio connected
+- Concurrent HTTP + LoRa operation
 
-### Multi-Agent Strategy
-- Do **not** lock to Hermes
-- Test with local Llama + OpenAI + Grok + Deepseek agents
-- Desktop Console should be agent-agnostic
+### Agent Bus (port 8787)
+- Inter-agent messaging (register, send, inbox poll, ack)
+- Auto-timeout (120s configurable)
+- JSON logging per session
+- Agents: Hermes, Orion, Codex, firmware pagers
+
+### Device Firmware (PlatformIO)
+- 5 ESP32 display devices, shared RaamsesClient.h library
+- CYD — 320x240 TFT desktop monitor
+- Cardputer — keyboard + display, can compose messages to agent
+- Core2 — touch LCD with action buttons (refresh, alert, clear)
+- StickC Plus2 — 80x160 pocket monitor
+- Watchy 2.0 — e-paper, deep sleep, 5-min wake cycle
+
+### Consoles & Dashboards
+- RADAR dashboard (3-panel Rich, live gateway data)
+- Terminal console (htop-style)
+- Server console
+- Monitor.py
+- Sim device launcher (3 agents with staggered heartbeats)
+
+### Windows Build (C++23)
+- ConfigLoader, Logger, Verifier
+- CMake multi-target build
+- Platform-aware signal handling
 
 ## Repository Structure
 
 ```
-rgsServer/
-├── ProjectStatus/          # This folder - status, plans, decisions
+RaamsesServer/
+├── ProjectStatus/          # Status docs
+├── firmware/               # ESP32 PlatformIO firmware (5 devices)
+│   ├── platformio.ini      # 5 environments: cyd, cardputer, core2, stickc, watchy
+│   ├── README.md
+│   └── src/
+│       ├── RaamsesClient.h # Shared WiFi + HTTP + state
+│       ├── cyd_main.cpp
+│       ├── cardputer_main.cpp
+│       ├── core2_main.cpp
+│       ├── stickc_main.cpp
+│       └── watchy_main.cpp
+├── firmware/rangepi/       # RangePi RP2040 MicroPython bridge
 ├── schemas/                # XSD protocol definitions
 ├── src/
 │   ├── linux/
-│   │   ├── rgs/            # Python package (gateway, console, messages)
-│   │   │   ├── server/     # GatewayServer, SessionRegistry, MessageRouter
-│   │   │   ├── messages/   # Protocol message types
-│   │   │   ├── client/     # TCP device client / emulator
-│   │   │   └── console/    # Terminal dashboard (Rich-based)
+│   │   ├── rgs/             # Python package (gateway, console, client, lora, agentbus)
+│   │   │   ├── server/      # GatewayServer, SessionRegistry, MessageRouter
+│   │   │   ├── agentbus/    # Agent Bus (port 8787)
+│   │   │   ├── lora/        # LoRa bridge (Meshtastic + RangePi)
+│   │   │   ├── client/      # TCP device client + emulator
+│   │   │   ├── console/     # RADAR, terminal, server consoles
+│   │   │   ├── messages/    # Protocol message types
+│   │   │   ├── verifier.py  # Trust-Verify
+│   │   │   ├── report_issue.py
+│   │   │   └── site_config.py
 │   │   └── cpp/            # C++ verifier, core, logging
-│   ├── windows/            # Windows C++ build (planned)
-│   └── android/            # Android console app (Kotlin/Jetpack Compose)
+│   ├── windows/            # Windows C++ build
+│   └── android/            # Android console app (Kotlin)
 ├── QA/
-│   ├── tests/              # pytest unit tests (37 passing)
-│   ├── emulator/           # Verifier emulator (Python)
-│   └── console/            # Legacy console copy
-└── .github/workflows/      # CI (Android build)
+│   ├── tests/              # 158 passing pytest tests
+│   └── console/
+├── launch_gateway.py      # Single-command gateway launcher
+├── launch_agentbus.py     # Agent Bus launcher
+├── launch_devices.py      # Sim device launcher
+├── daemon_gateway.py     # Daemonized gateway
+├── run_radar.py          # RADAR dashboard launcher
+├── sim_alert.py          # Alert trigger/clear test tool
+└── gateway.log           # Runtime log
 ```
-
-### Python Import Paths
-```python
-from rgs.server.gateway import RGsGatewayServer
-from rgs.server.session_registry import SessionRegistry
-from rgs.messages.envelope import RaamsesMessage
-from rgs.console.terminal_console import RaamsesConsole
-```
-Set `PYTHONPATH=src/linux` or install as editable package.
 
 ## Recent Commits
-- feat(console): 3-section mission control dashboard (config, devices, logs)
-- refactor: Rename 'raamses' package to 'rgs', restructure src/
-- feat(cpp): Improve Verifier with methodology placeholders
-- Add gateway server: TCP router, session registry, and message classifier
+- feat: add Agent Bus — inter-agent messaging on port 8787
+- feat: add gateway_stats to heartbeat/register responses + GET /stats endpoint
+- feat: heartbeat/register responses include 'Agent needs help' alert
+- feat: LoRa + HTTP concurrent gateway with Meshtastic bridge
+- feat: Add Trust but Verify, User-Reported Issues, and SiteId to Linux side
 
----
-*Only the user and Hermes are currently working in this repo.*
+## Hardware Inventory
+
+| Device | Type | Transport | Status |
+|--------|------|-----------|--------|
+| CYD (Cheap Yellow Display) | ESP32 + 2.8" TFT | WiFi (HTTP) | Firmware ready |
+| M5Stack Cardputer | ESP32-S3 + keyboard | WiFi (HTTP) | Firmware ready |
+| M5Stack Core2 | ESP32 + 2" touch LCD | WiFi (HTTP) | Firmware ready |
+| M5Stack StickC Plus2 | ESP32-PICO + 0.96" TFT | WiFi (HTTP) | Firmware ready |
+| Watchy 2.0 | ESP32 + 1.28" e-paper | WiFi (HTTP) | Firmware ready |
+| Meshtastic radio x2 | LoRa mesh | LoRa | Protocol ready, mock mode |
+| RangePi dongle | RP2040 + LoRa | USB serial | Firmware + backend ready |
+
+## Multi-Agent Strategy
+- Do not lock to Hermes — agent-agnostic design
+- Test with local Llama + OpenAI + Grok + Deepseek agents
+- Agent Bus allows any agent to register and message
+- Desktop Console is agent-agnostic
