@@ -7,12 +7,16 @@ Two render modes:
   - Terminal (default): ANSI panel, works over plain SSH, no display needed.
   - GUI (--gui): a real Tkinter window, mirrors the CYD firmware layout.
 
+The status line cycles through useful info every --status-interval seconds
+(model in use, session name, agent state, progress, memory), while the
+connection state ("Registered OK" / "OFFLINE") stays always visible.
+
 Stdlib only (urllib + json + threading + tkinter).
 
 Usage:
     python3 cyd_simulator.py cyd-001                       # terminal
     python3 cyd_simulator.py cyd-001 --gui                 # windowed (needs a display)
-    python3 cyd_simulator.py cyd-001 --host 192.168.6.230 --heartbeat 5
+    python3 cyd_simulator.py cyd-001 --model deepseek-v4-pro-0813 --status-interval 15
 """
 
 from __future__ import annotations
@@ -38,6 +42,9 @@ DARKRED_BG = "\033[41m"
 NAVY_BG = "\033[44m"
 CLEAR = "\033[2J\033[H"
 
+DEFAULT_MODEL = "deepseek-v4-pro-0813"
+DEFAULT_SESSION = "Raamses CYD emulator"
+
 
 class GatewayClient:
     """Minimal HTTP/JSON client for the Raamses gateway (std urllib)."""
@@ -59,10 +66,6 @@ class GatewayClient:
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
 
-    def _get(self, path: str) -> dict:
-        with urllib.request.urlopen(f"{self.base}{path}", timeout=self.timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-
     def register(self, device_id: str, device_type: str = "cyd",
                  schema_version: str = "1.0", firmware_version: str = "1.0") -> dict:
         return self._post("/register", {
@@ -76,10 +79,23 @@ class GatewayClient:
         return self._post("/heartbeat", {"device_id": device_id})
 
 
+def build_statuses(model: str, session: str) -> list[str]:
+    """The rotating info statuses shown on the status line."""
+    return [
+        f"Model: {model}",
+        f"Session: {session}",
+        "Agent: IDLE",
+        "Progress: 100% complete",
+        "Memory: MemCastle connected",
+        "Heartbeat: OK",
+    ]
+
+
 class CYDState:
     """What the simulated CYD knows and shows."""
 
-    def __init__(self, device_id: str, host: str, port: int):
+    def __init__(self, device_id: str, host: str, port: int,
+                 statuses: list[str], status_interval: float):
         self.device_id = device_id
         self.gateway = f"{host}:{port}"
         self.registered = False
@@ -88,12 +104,15 @@ class CYDState:
         self.stats: dict = {}
         self.last_hb = 0.0
         self.last_error = ""
+        self.statuses = statuses or [""]
+        self.status_interval = status_interval
+        self.status_idx = 0
+        self.last_switch = 0.0
 
 
 def apply_response(state: CYDState, resp: dict) -> None:
     """Update state from a register/heartbeat response."""
     state.registered = bool(resp.get("accepted", True))
-    # Alert signal: prefer the explicit boolean, else treat the string field as truthy.
     if "alert_active" in resp:
         state.alert_active = bool(resp["alert_active"])
     else:
@@ -101,6 +120,14 @@ def apply_response(state: CYDState, resp: dict) -> None:
     state.alert_seq = resp.get("alert_seq")
     state.stats = resp.get("gateway_stats") or {}
     state.last_hb = time.time()
+
+
+def current_status(state: CYDState, now: float) -> str:
+    """Advance and return the rotating status string."""
+    if now - state.last_switch >= state.status_interval:
+        state.status_idx = (state.status_idx + 1) % len(state.statuses)
+        state.last_switch = now
+    return state.statuses[state.status_idx]
 
 
 def _fmt_uptime(seconds: float) -> str:
@@ -121,6 +148,10 @@ def _fmt_hb_age(state: CYDState, now: float) -> str:
     return f"{int(now - state.last_hb)}s ago"
 
 
+def _pad(text_visible: str, width: int) -> str:
+    return text_visible + " " * max(0, width - len(text_visible))
+
+
 # ── Terminal render ──────────────────────────────────────────────────────────
 
 def render_screen(state: CYDState, now: float) -> str:
@@ -134,36 +165,38 @@ def render_screen(state: CYDState, now: float) -> str:
     header_line = f"│{header}{pad}{badge}│"
 
     s = state.stats
-    cpu_line = (f" CPU: {s.get('cpu_temp_c', '--')}°C  {s.get('cpu_percent', '--')}%"
-                if s else " CPU: ---")
-    ram_line = (f" RAM: {s.get('mem_used_percent', '--')}%  {s.get('mem_free_mb', '--')}MB free"
-                if s else " RAM: ---")
+    cpu = f" CPU: {s.get('cpu_temp_c', '--')}°C  {s.get('cpu_percent', '--')}%" if s else " CPU: ---"
+    ram = f" RAM: {s.get('mem_used_percent', '--')}%  {s.get('mem_free_mb', '--')}MB free" if s else " RAM: ---"
     uptime = _fmt_uptime(s.get("uptime_seconds", 0)) if s else "---"
     agents = s.get("agents_registered", "?") if s else "?"
 
-    status = "Registered OK" if state.registered else "OFFLINE"
-    status_color = GREEN if state.registered else RED
-    status_line = f"│ Status: {status_color}{status}{RESET}"
-    hb_line = f"│ Last HB: {_fmt_hb_age(state, now)}"
+    # Connection line (always visible) + rotating status line
+    if state.registered:
+        conn = f"{GREEN}● Registered OK{RESET}"
+    else:
+        conn = f"{RED}○ OFFLINE{RESET}"
+    conn_visible = "● Registered OK" if state.registered else "○ OFFLINE"
+    info = current_status(state, now)
 
     lines = [
         f"┌{bar}┐",
         header_line,
         f"├{bar}┤",
-        f"│ Gateway: {state.gateway}" + " " * (W - len(f" Gateway: {state.gateway}")) + "│",
-        cpu_line + " " * (W - len(" CPU: --°C  --%")) + "│",
-        ram_line + " " * (W - len(" RAM: --%  --MB free")) + "│",
-        f"│ Agents: {agents}" + " " * (W - len(f" Agents: {agents}")) + "│",
-        f"│ Uptime: {uptime}" + " " * (W - len(f" Uptime: {uptime}")) + "│",
+        "│" + _pad(f" Gateway: {state.gateway}", W) + "│",
+        "│" + _pad(cpu, W) + "│",
+        "│" + _pad(ram, W) + "│",
+        "│" + _pad(f" Agents: {agents}", W) + "│",
+        "│" + _pad(f" Uptime: {uptime}", W) + "│",
         f"├{bar}┤",
-        status_line + " " * (W - len(" Status: Registered OK") + 1) + "│",
-        hb_line + " " * (W - len(" Last HB: ---")) + "│",
+        "│ " + conn + _pad("", W - len(conn_visible) - 1) + "│",
+        "│ " + f"{CYAN}{info}{RESET}" + _pad("", W - len(info) - 1) + "│",
+        "│" + _pad(f" Last HB: {_fmt_hb_age(state, now)}", W) + "│",
     ]
 
     if state.alert_active:
-        lines.append(f"│{DARKRED_BG}{YELLOW}{BOLD}  AGENT NEEDS HELP  {RESET}" + " " * (W - 20) + "│")
+        lines.append(f"│{DARKRED_BG}{YELLOW}{BOLD}  AGENT NEEDS HELP  {RESET}" + _pad("", W - 20) + "│")
     else:
-        lines.append(f"│{' ' * W}│")
+        lines.append("│" + " " * W + "│")
 
     lines.append(f"└{bar}┘")
     lines.append(f"{CYAN}  [Ctrl-C]=quit{RESET}")
@@ -174,7 +207,8 @@ def render_screen(state: CYDState, now: float) -> str:
 
 def run_terminal(args) -> int:
     client = GatewayClient(args.host, args.port)
-    state = CYDState(args.device_id, args.host, args.port)
+    statuses = build_statuses(args.model, args.session)
+    state = CYDState(args.device_id, args.host, args.port, statuses, args.status_interval)
 
     try:
         apply_response(state, client.register(args.device_id, args.device_type))
@@ -216,14 +250,14 @@ def run_gui(args) -> int:
         return 1
 
     client = GatewayClient(args.host, args.port)
-    state = CYDState(args.device_id, args.host, args.port)
+    statuses = build_statuses(args.model, args.session)
+    state = CYDState(args.device_id, args.host, args.port, statuses, args.status_interval)
 
     root = tk.Tk()
     root.title(f"Raamses CYD — {args.device_id}")
     root.configure(bg="black")
     root.resizable(False, False)
 
-    # Header bar (navy, flips dark-red on alert)
     header_bar = tk.Frame(root, bg="#000080")
     header_bar.pack(fill="x")
     title = tk.Label(header_bar, text="RAAMSES MONITOR", bg="#000080",
@@ -233,7 +267,6 @@ def run_gui(args) -> int:
                            font=("Helvetica", 10, "bold"), padx=8)
     alert_badge.pack(side="right")
 
-    # Stats panel
     body = tk.Frame(root, bg="black", padx=8, pady=6)
     body.pack(fill="x")
     def stat_row(text, color="white"):
@@ -250,13 +283,15 @@ def run_gui(args) -> int:
     tk.Frame(root, bg="gray30", height=2).pack(fill="x", pady=4)
 
     status_lbl = tk.Label(root, text="", bg="black", fg="green",
-                          font=("Helvetica", 11), anchor="w", padx=8)
+                          font=("Helvetica", 11, "bold"), anchor="w", padx=8)
     status_lbl.pack(fill="x")
+    info_lbl = tk.Label(root, text="", bg="black", fg="cyan",
+                        font=("Helvetica", 11), anchor="w", padx=8)
+    info_lbl.pack(fill="x")
     hb_lbl = tk.Label(root, text="Last HB: ---", bg="black", fg="white",
                       font=("Helvetica", 11), anchor="w", padx=8)
     hb_lbl.pack(fill="x")
 
-    # Alert box (bottom of screen)
     alert_box = tk.Label(root, text="", bg="black", fg="yellow",
                          font=("Helvetica", 16, "bold"), height=2)
     alert_box.pack(fill="x", padx=8, pady=6)
@@ -279,7 +314,6 @@ def run_gui(args) -> int:
             ag_lbl.config(text="Agents: ---")
             up_lbl.config(text="Uptime: ---")
 
-        # Alert drive the header + box colors
         if state.alert_active:
             header_bar.config(bg="#8b0000")
             title.config(bg="#8b0000")
@@ -292,10 +326,11 @@ def run_gui(args) -> int:
             alert_box.config(bg="black", text="")
 
         if state.registered:
-            status_lbl.config(text="Status: Registered OK", fg="green")
+            status_lbl.config(text="● Registered OK", fg="green")
         else:
-            status_lbl.config(text="Status: OFFLINE", fg="red")
+            status_lbl.config(text="○ OFFLINE", fg="red")
 
+        info_lbl.config(text=current_status(state, time.time()))
         hb_lbl.config(text=f"Last HB: {_fmt_hb_age(state, time.time())}")
         err_lbl.config(text=state.last_error)
 
@@ -334,6 +369,12 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--heartbeat", type=float, default=5.0)
     ap.add_argument("--refresh", type=float, default=0.5)
+    ap.add_argument("--model", default=DEFAULT_MODEL,
+                    help="model name shown in the rotating status")
+    ap.add_argument("--session", default=DEFAULT_SESSION,
+                    help="session name shown in the rotating status")
+    ap.add_argument("--status-interval", type=float, default=15.0,
+                    help="seconds between status-line rotations")
     ap.add_argument("--gui", action="store_true",
                     help="render in a Tkinter window instead of the terminal")
     args = ap.parse_args()
